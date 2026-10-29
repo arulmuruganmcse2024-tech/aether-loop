@@ -150,6 +150,8 @@ def test_bootstrap_kinematic_step_cosmos_modalities_and_signature_verifier():
     assert len(b_data["vla_trajectory"]["policy_v1_1_steps"]) == 50
     assert "openshell_policy_yaml" in b_data["attestation"]
     assert "sha256_manifest_digest" in b_data["attestation"]
+    assert "yoshikawa_manipulability" in b_data["attestation"]
+    assert len(b_data["attestation"]["openshell_agent_audit_log"]) >= 4
 
     step = client.post(
         "/api/v1/kinematics/step",
@@ -157,6 +159,9 @@ def test_bootstrap_kinematic_step_cosmos_modalities_and_signature_verifier():
     )
     assert step.status_code == 200
     assert len(step.json()["joint_torques_nm"]) == 6
+    assert "momentum_observer_residual_nm" in step.json()
+    assert "estimated_contact_mu_hat" in step.json()
+    assert "yoshikawa_manipulability_index" in step.json()
 
     mods = client.post(
         "/api/v1/cosmos/recompute-modalities",

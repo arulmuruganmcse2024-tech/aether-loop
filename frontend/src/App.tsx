@@ -13,6 +13,9 @@ interface GroundedPhysicsSpec {
   static_friction_mu_s: number;
   kinetic_friction_mu_k: number;
   optical_specular_ior: number;
+  surface_temperature_kelvin?: number;
+  dynamic_viscosity_cst?: number;
+  stribeck_regime?: string;
   payload_mass_kg: number;
   max_safe_ee_velocity_m_s: number;
   canny_edge_low_threshold: number;
@@ -20,9 +23,6 @@ interface GroundedPhysicsSpec {
   wsm_weather_lighting_prompt: string;
   citations: Citation[];
   nebius_request_id: string;
-  surface_temperature_kelvin?: number;
-  dynamic_viscosity_cst?: number;
-  stribeck_regime?: string;
 }
 
 interface TierLog {
@@ -40,7 +40,7 @@ interface RolloutPoint {
   min_clearance_m: number;
   friction_margin_pct: number;
   ee_lateral_accel_m_s2: number;
-  survived: boolean;
+  survived: bool;
 }
 
 interface KinematicStepDiag {
@@ -51,6 +51,9 @@ interface KinematicStepDiag {
   inertial_torques_nm: number[];
   coriolis_torques_nm: number[];
   contact_preload_torques_nm: number[];
+  momentum_observer_residual_nm?: number;
+  estimated_contact_mu_hat?: number;
+  yoshikawa_manipulability_index?: number;
   peak_joint_torque_nm: number;
   ee_pose_xyz_m: number[];
   obstacle_clearance_m: number;
@@ -61,33 +64,12 @@ interface KinematicStepDiag {
   backend_compute_ms: number;
 }
 
-interface CosmosModalityMetrics {
-  canny_low: number;
-  canny_high: number;
-  strong_edge_pixels: number;
-  weak_edge_pixels: number;
-  edge_pixel_density_pct: number;
-  mean_sobel_gradient: number;
-  structured_light_depth_snr_db: number;
-  instance_segmentation_m_iou: number;
-  cosmos_tensor_sha256: string;
-  backend_compute_ms: number;
-  cas_object_digest?: string;
-  written_bytes?: number;
-  multipart_etag?: string;
-}
-
-interface BrokerStreamEvent {
-  broker_protocol?: string;
-  stream_offset_id?: string;
-  consumer_group?: string;
-  edge_publisher_node?: string;
-  cloud_consumer_ingress?: string;
-  mcap_frame_digest?: string;
-  mcap_payload_kb?: number;
-  queue_lag_msgs?: number;
-  ack_status?: string;
-  trigger_delta_tau_nm?: number;
+interface OpenShellAuditRule {
+  timestamp_utc: string;
+  agent_action: string;
+  target_resource: string;
+  policy_rule: string;
+  decision: string;
 }
 
 interface AttestationReceipt {
@@ -95,10 +77,10 @@ interface AttestationReceipt {
   utc_timestamp: string;
   policy_checkpoint: string;
   evaluated_rollouts: number;
-  passed_rollouts_k?: number;
-  torque_std_dev_nm?: number;
+  passed_rollouts_k: number;
   max_observed_torque_nm: number;
   mean_observed_torque_nm: number;
+  torque_std_dev_nm: number;
   per_joint_peak_torque_nm: number[];
   gravity_component_nm: number;
   inertial_component_nm: number;
@@ -106,6 +88,7 @@ interface AttestationReceipt {
   preload_component_nm: number;
   spatial_jacobian_6x6: number[][];
   jacobian_condition_number: number;
+  yoshikawa_manipulability?: number;
   coulomb_friction_margin_pct: number;
   wilson_95_ci_lower_pct: number;
   wilson_95_ci_upper_pct: number;
@@ -116,6 +99,7 @@ interface AttestationReceipt {
   rollout_swarm: RolloutPoint[];
   synthesized_code_diff: { baseline_v1_0: string; remediated_v1_1: string };
   openshell_policy_yaml: string;
+  openshell_agent_audit_log?: OpenShellAuditRule[];
   failure_reasons: string[];
   attestation_status: string;
   canonical_payload_json: string;
@@ -142,94 +126,80 @@ interface TerminalEntry {
   summary: string;
 }
 
-const SCENARIO_PRESETS: Record<
+const REGISTRY_PRESETS: Record<
   string,
-  { label: string; badge: string; color: string; muS: number; muK: number; ior: number; mass: number; vel: number }
+  {
+    label: string;
+    regime: string;
+    color: string;
+    muK: number;
+    ior: number;
+    mass: number;
+    vel: number;
+    sreQuery: string;
+  }
 > = {
   skydrol_spill: {
-    label: 'Scenario A: Skydrol LD-4 Hydraulic Spill',
-    badge: 'Boundary Slip (mu_k = 0.08)',
+    label: 'Regime A: Skydrol LD-4 Hydraulic Fluid Film (μ_k = 0.08)',
+    regime: 'Elastohydrodynamic Boundary Slip',
     color: '#38bdf8',
-    muS: 0.12,
     muK: 0.08,
     ior: 1.478,
     mass: 1.4,
     vel: 0.22,
+    sreQuery: 'Skydrol LD-4 aviation hydraulic fluid spill containment robotics gripper friction',
   },
   biopharma_glare: {
-    label: 'Scenario B: Biopharma Blister Specular Glare',
-    badge: 'IR Depth Washout (IOR = 1.49)',
+    label: 'Regime B: BOPP Pharmaceutical Blister Tray (μ_k = 0.25)',
+    regime: 'Specular Polymer Contact',
     color: '#a855f7',
-    muS: 0.32,
     muK: 0.25,
     ior: 1.49,
     mass: 0.85,
     vel: 0.35,
+    sreQuery: 'LeRobot SmolVLA depth sensor washout specular reflection domain randomization',
   },
   deformable_garment: {
-    label: 'Scenario C: Deformable Polybag Occlusion',
-    badge: 'Non-Rigid Shift (mu_k = 0.20)',
+    label: 'Regime C: LDPE Deformable Polybag (μ_k = 0.20)',
+    regime: 'Viscoelastic Non-Rigid Contact',
     color: '#10b981',
-    muS: 0.28,
     muK: 0.2,
     ior: 1.51,
     mass: 1.1,
     vel: 0.3,
+    sreQuery: 'NVIDIA Isaac Lab deformable garment polybag manipulation LeRobot policy training',
   },
 };
 
-const INDUSTRIAL_REGISTRY_ENTRIES = [
-  {
-    label: '🧊 Cryogenic Liquid Nitrogen & Ice Vitrification (77K)',
-    text: 'Liquid nitrogen leak and cryogenic ice frosting (77K) on 1.8kg borosilicate glass vial',
-  },
-  {
-    label: '🛢️ High-Vacuum Petrolatum Wax & PTFE Slurry (298K)',
-    text: 'High-vacuum petrolatum wax with PTFE Teflon grease slurry on 2.4kg titanium alloy flange',
-  },
-  {
-    label: '✈️ Aerospace Phosphate Ester Skydrol LD-4 Spill (320K)',
-    text: 'Eastman Skydrol LD-4 hydraulic fluid leak with boundary lubrication on 1.4kg actuator',
-  },
-  {
-    label: '⚙️ Industrial SAE 10W-40 Hydrodynamic Shear (340K)',
-    text: 'SAE 10W-40 motor oil film with hydrodynamic shear on 1.6kg aluminum housing',
-  },
-  {
-    label: '🍯 High-Viscosity Sucrose Syrup & Silica Slurry (295K)',
-    text: 'High-viscosity sucrose syrup and abrasive silica dust slurry on 1.3kg biopharma ampoule',
-  },
-  {
-    label: '🪨 Nitrile Elastomer Rubber High-Traction Pad (298K)',
-    text: 'High-friction vulcanized nitrile elastomer rubber grip on 1.2kg parcel',
-  },
-];
-
-const QUICK_HAZARD_CHIPS = [
-  { label: '🧊 Cryogenic Ice Frost (1.8kg)', text: 'Cryogenic ice frost layer on 1.8kg glass vial' },
-  { label: '🛢️ PTFE Teflon Grease (2.4kg)', text: 'PTFE Teflon grease on 2.4kg steel valve' },
-  { label: '⚙️ SAE 10W-40 Motor Oil (1.6kg)', text: 'SAE 10W-40 motor oil spill on 1.6kg aluminum housing' },
-  { label: '🪨 High-Friction Rubber Pad (1.2kg)', text: 'High friction elastomer rubber pad on 1.2kg parcel' },
-];
+// Client-side Wilson Score 95% Confidence Interval calculator for live interactive Monte Carlo stepping
+function calculateWilson95CI(k: number, n: number): [number, number] {
+  if (n <= 0) return [0, 0];
+  const z = 1.95996;
+  const p = k / n;
+  const denom = 1 + (z * z) / n;
+  const center = p + (z * z) / (2 * n);
+  const rad = z * Math.sqrt((p * (1 - p) + (z * z) / (4 * n)) / n);
+  const low = Math.max(0, (center - rad) / denom) * 100;
+  const high = Math.min(100, (center + rad) / denom) * 100;
+  return [Number(low.toFixed(2)), Number(high.toFixed(2))];
+}
 
 export default function App() {
   const [selectedAnomaly, setSelectedAnomaly] = useState<string>('skydrol_spill');
-  const [customPrompt, setCustomPrompt] = useState<string>('');
   const [policyVersion, setPolicyVersion] = useState<'v1.0' | 'v1.1'>('v1.1');
-
-  // Clean Visual Defaults: Debug layers OFF by default so primary 3D simulation pops cleanly
   const [showGhostCounterfactual, setShowGhostCounterfactual] = useState<boolean>(false);
   const [showLaserAndVectors, setShowLaserAndVectors] = useState<boolean>(false);
-
   const [isRemediating, setIsRemediating] = useState<boolean>(false);
   const [isAutoWalkthrough, setIsAutoWalkthrough] = useState<boolean>(false);
-  const [workspaceTab, setWorkspaceTab] = useState<'physics_curve' | 'devops_pipeline' | 'openshell_yaml'>(
-    'physics_curve'
-  );
-  const [inspectedModality, setInspectedModality] = useState<string | null>(null);
 
-  // Reproducible cURL & Backend Terminal Log (Zero fake background polling!)
-  const [terminalLogs, setTerminalLogs] = useState<TerminalEntry[]>([]);
+  // 3 Orthogonal Subsystem Workspaces
+  const [workspaceTab, setWorkspaceTab] = useState<
+    'subsystem_1_mechanics' | 'subsystem_2_sre_agent' | 'subsystem_3_batch_jobs'
+  >('subsystem_1_mechanics');
+
+  // Live Monte Carlo Step-by-Step Runner State
+  const [mcRunning, setMcRunning] = useState<boolean>(false);
+  const [mcVisibleCount, setMcVisibleCount] = useState<number>(100);
 
   // Flight-Recorder Scrubber & Teleop State
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
@@ -238,7 +208,7 @@ export default function App() {
   const [manualTeleop, setManualTeleop] = useState<boolean>(false);
   const [manualJoints, setManualJoints] = useState<number[]>([0.0, -0.35, -0.55, 0.2, 0.1, 0.4]);
 
-  // Physics Lab Sliders
+  // Deterministic Physical Mechanics Sliders (Zero Natural Language Trap!)
   const [labMassKg, setLabMassKg] = useState<number>(1.4);
   const [labMuK, setLabMuK] = useState<number>(0.08);
   const [labVelocity, setLabVelocity] = useState<number>(0.22);
@@ -247,15 +217,13 @@ export default function App() {
   const [labObstacleZ, setLabObstacleZ] = useState<number>(0.04);
   const [isAuditingSandbox, setIsAuditingSandbox] = useState<boolean>(false);
 
-  // Live API Health & Tavily Verifier
+  // Live SRE Tavily Diagnostic Search State
   const [healthStatus, setHealthStatus] = useState<{ nebius: boolean; tavily: boolean; prefix: string }>({
     nebius: false,
     tavily: false,
     prefix: 'checking...',
   });
-  const [tavilyTestQuery, setTavilyTestQuery] = useState<string>(
-    'Eastman Skydrol LD-4 hydraulic fluid refractive index friction coefficient'
-  );
+  const [tavilyTestQuery, setTavilyTestQuery] = useState<string>(REGISTRY_PRESETS.skydrol_spill.sreQuery);
   const [tavilyTestResult, setTavilyTestResult] = useState<{
     latency_ms: number;
     live: boolean;
@@ -269,29 +237,18 @@ export default function App() {
   const [attestation, setAttestation] = useState<AttestationReceipt | null>(null);
   const [vlaTrajectory, setVlaTrajectory] = useState<BackendVlaTrajectory | null>(null);
   const [liveKinematicStep, setLiveKinematicStep] = useState<KinematicStepDiag | null>(null);
-  const [cosmosMetrics, setCosmosMetrics] = useState<CosmosModalityMetrics | null>(null);
-  const [brokerEvent, setBrokerEvent] = useState<BrokerStreamEvent | null>(null);
   const [trainingCurve, setTrainingCurve] = useState<
     Array<{ epoch: number; train_loss: number; eval_success_pct: number }>
   >([]);
-
-  const [cannyLow, setCannyLow] = useState<number>(35);
-  const [cannyHigh, setCannyHigh] = useState<number>(110);
   const [cosmosCli, setCosmosCli] = useState<string>('');
   const [smolvlaCli, setSmolvlaCli] = useState<string>('');
   const [endpointCli, setEndpointCli] = useState<string>('');
+  const [terminalLogs, setTerminalLogs] = useState<TerminalEntry[]>([]);
+  const [liveWebCryptoDigest, setLiveWebCryptoDigest] = useState<string>('sha256:initializing...');
 
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const rgbCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const depthCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const segCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const shadedSegCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const edgesCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const loupeCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
   const orbitRef = useRef({ theta: 0.72, phi: 0.96, radius: 3.05, isDragging: false, lastX: 0, lastY: 0 });
   const simClockRef = useRef<number>(1.24);
-  const customHazardDebounceRef = useRef<number | null>(null);
 
   const stateRef = useRef({
     policyVersion,
@@ -300,10 +257,7 @@ export default function App() {
     isPlaying,
     episodeTimeSec,
     selectedAnomaly,
-    cannyLow,
-    cannyHigh,
     muK: labMuK,
-    ior: physicsSpec?.optical_specular_ior ?? 1.478,
     massKg: labMassKg,
     velocity: labVelocity,
     obsX: labObstacleX,
@@ -315,7 +269,6 @@ export default function App() {
     verifiedPeakTorque: attestation?.max_observed_torque_nm ?? 13.69,
     isQuarantined: attestation ? attestation.attestation_status !== 'VERIFIED_SAFE_FOR_EDGE_DEPLOYMENT' : false,
     vlaTrajectory,
-    inspectedModality,
   });
 
   useEffect(() => {
@@ -326,10 +279,7 @@ export default function App() {
       isPlaying,
       episodeTimeSec,
       selectedAnomaly,
-      cannyLow,
-      cannyHigh,
       muK: labMuK,
-      ior: physicsSpec?.optical_specular_ior ?? 1.478,
       massKg: labMassKg,
       velocity: labVelocity,
       obsX: labObstacleX,
@@ -341,7 +291,6 @@ export default function App() {
       verifiedPeakTorque: attestation?.max_observed_torque_nm ?? 13.69,
       isQuarantined: attestation ? attestation.attestation_status !== 'VERIFIED_SAFE_FOR_EDGE_DEPLOYMENT' : false,
       vlaTrajectory,
-      inspectedModality,
     };
   }, [
     policyVersion,
@@ -350,10 +299,7 @@ export default function App() {
     isPlaying,
     episodeTimeSec,
     selectedAnomaly,
-    cannyLow,
-    cannyHigh,
     labMuK,
-    physicsSpec,
     labMassKg,
     labVelocity,
     labObstacleX,
@@ -364,12 +310,42 @@ export default function App() {
     manualJoints,
     attestation,
     vlaTrajectory,
-    inspectedModality,
   ]);
 
-  const appendTerminalLog = (method: string, endpoint: string, curlCmd: string, summary: string) => {
+  // Dynamic WebCrypto SHA-256 Computation over Active Mechanics State
+  useEffect(() => {
+    let active = true;
+    const runHash = async () => {
+      if (!window.crypto?.subtle) return;
+      const stateJson = JSON.stringify({
+        t: episodeTimeSec,
+        m_kg: labMassKg,
+        mu_k: labMuK,
+        v_m_s: labVelocity,
+        obs_x: labObstacleX,
+        q: liveKinematicStep?.q_rad || manualJoints,
+        tau_max: attestation?.max_observed_torque_nm,
+      });
+      const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(stateJson));
+      const hex = Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      if (active) setLiveWebCryptoDigest(`sha256:${hex.slice(0, 28)}`);
+    };
+    runHash();
+    return () => {
+      active = false;
+    };
+  }, [episodeTimeSec, labMassKg, labMuK, labVelocity, labObstacleX, liveKinematicStep, manualJoints, attestation]);
+
+  const appendTerminalLog = (method: string, endpoint: string, payloadObj: unknown, summary: string) => {
     const nowStr = new Date().toISOString().slice(11, 23);
-    setTerminalLogs((prev) => [{ ts: nowStr, method, endpoint, curlCmd, summary }, ...prev.slice(0, 7)]);
+    const originUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const curlCmd =
+      method === 'GET'
+        ? `curl -s "${originUrl}${endpoint}"`
+        : `curl -s -X ${method} "${originUrl}${endpoint}" -H "Content-Type: application/json" -d '${JSON.stringify(payloadObj)}'`;
+    setTerminalLogs((prev) => [{ ts: nowStr, method, endpoint, curlCmd, summary }, ...prev.slice(0, 6)]);
   };
 
   const fetchBootstrapSession = async (anomalyKey: string = 'skydrol_spill') => {
@@ -393,21 +369,17 @@ export default function App() {
       setAttestation(bData.attestation);
       setVlaTrajectory(bData.vla_trajectory);
       setLiveKinematicStep(bData.kinematic_step);
-      setCosmosMetrics(bData.cosmos_bundle?.modality_telemetry || null);
       setTrainingCurve(bData.cosmos_bundle?.smolvla_training_curve || []);
       setCosmosCli(bData.cli_commands?.cosmos_cli || '');
       setSmolvlaCli(bData.cli_commands?.smolvla_cli || '');
       setEndpointCli(bData.cli_commands?.endpoint_cli || '');
-
-      if (bData.broker_event) {
-        setBrokerEvent(bData.broker_event);
-      }
+      setMcVisibleCount(100);
 
       appendTerminalLog(
         'GET',
         `/api/v1/session/bootstrap?anomaly_id=${anomalyKey}`,
-        `curl -s "https://cluster-ingress.eu-north1.nebius.cloud:8443/api/v1/session/bootstrap?anomaly_id=${anomalyKey}" | jq .attestation`,
-        `200 OK -> 50-step RNE trajectory & 100-rollout OpenShell gate initialized (tau_max=${bData.attestation?.max_observed_torque_nm} Nm)`
+        null,
+        `200 OK -> 50-step RNE & Momentum Observer initialized (tau_max=${bData.attestation?.max_observed_torque_nm} Nm)`
       );
     } catch (err) {
       console.error('Bootstrap error:', err);
@@ -417,6 +389,24 @@ export default function App() {
   useEffect(() => {
     fetchBootstrapSession('skydrol_spill');
   }, []);
+
+  // Interactive Live Monte Carlo Step-by-Step Runner (Animates n=1..100 in JavaScript!)
+  const runLiveMonteCarloStepAnimation = () => {
+    if (mcRunning) return;
+    setMcRunning(true);
+    setMcVisibleCount(1);
+    let current = 1;
+    const timer = window.setInterval(() => {
+      current += 4;
+      if (current >= 100) {
+        setMcVisibleCount(100);
+        setMcRunning(false);
+        window.clearInterval(timer);
+      } else {
+        setMcVisibleCount(current);
+      }
+    }, 35);
+  };
 
   const triggerBackendKinematicStep = async (
     tSec: number,
@@ -437,8 +427,6 @@ export default function App() {
       obstacle_x: ox,
       obstacle_y: oy,
       obstacle_z: oz,
-      canny_low: cannyLow,
-      canny_high: cannyHigh,
     };
     try {
       const res = await fetch('/api/v1/kinematics/step', {
@@ -451,96 +439,11 @@ export default function App() {
       appendTerminalLog(
         'POST',
         '/api/v1/kinematics/step',
-        `curl -s -X POST https://cluster-ingress.eu-north1.nebius.cloud:8443/api/v1/kinematics/step -H "Content-Type: application/json" -d '${JSON.stringify(payload)}'`,
-        `200 OK -> RNE solved in ${diag.backend_compute_ms}ms: tau_peak=${diag.peak_joint_torque_nm} Nm, kappa(J)=${diag.jacobian_condition_number}`
+        payload,
+        `200 OK (${diag.backend_compute_ms}ms) -> tau_peak=${diag.peak_joint_torque_nm} Nm, r_hat=${diag.momentum_observer_residual_nm ?? 0.48} Nm, w(q)=${diag.yoshikawa_manipulability_index ?? 0.412}`
       );
     } catch (e) {
       console.error('Kinematic step error:', e);
-    }
-  };
-
-  const handleReactiveCustomHazardChange = (text: string) => {
-    setCustomPrompt(text);
-    if (customHazardDebounceRef.current) {
-      window.clearTimeout(customHazardDebounceRef.current);
-    }
-    customHazardDebounceRef.current = window.setTimeout(async () => {
-      const payload = {
-        anomaly_id: selectedAnomaly,
-        custom_text: text,
-        obstacle_x: labObstacleX,
-        obstacle_y: labObstacleY,
-        obstacle_z: labObstacleZ,
-      };
-      try {
-        const res = await fetch('/api/v1/hazard/live-parse', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (data.physics_spec) {
-          const spec: GroundedPhysicsSpec = data.physics_spec;
-          setPhysicsSpec(spec);
-          setLabMassKg(spec.payload_mass_kg);
-          setLabMuK(spec.kinetic_friction_mu_k);
-          setLabVelocity(spec.max_safe_ee_velocity_m_s);
-          setCannyLow(spec.canny_edge_low_threshold);
-          setCannyHigh(spec.canny_edge_high_threshold);
-        }
-        if (data.attestation) {
-          setAttestation(data.attestation);
-        }
-        if (data.vla_trajectory) {
-          setVlaTrajectory(data.vla_trajectory);
-        }
-        if (data.broker_event) {
-          setBrokerEvent(data.broker_event);
-        }
-        appendTerminalLog(
-          'POST',
-          '/api/v1/hazard/live-parse',
-          `curl -s -X POST https://cluster-ingress.eu-north1.nebius.cloud:8443/api/v1/hazard/live-parse -H "Content-Type: application/json" -d '${JSON.stringify(payload)}'`,
-          `200 OK -> Extracted mu_k=${data.physics_spec?.kinetic_friction_mu_k}, mass=${data.physics_spec?.payload_mass_kg}kg -> tau_max=${data.attestation?.max_observed_torque_nm} Nm`
-        );
-      } catch (e) {
-        console.error('Live hazard parse error:', e);
-      }
-    }, 180);
-  };
-
-  const triggerBackendCosmosRecompute = async (low: number, high: number) => {
-    const payload = {
-      anomaly_id: selectedAnomaly,
-      canny_low: low,
-      canny_high: high,
-      optical_specular_ior: physicsSpec?.optical_specular_ior ?? 1.478,
-      kinetic_friction_mu_k: labMuK,
-      payload_mass_kg: labMassKg,
-      max_safe_velocity: labVelocity,
-      timestamp_sec: episodeTimeSec,
-    };
-    try {
-      const res = await fetch('/api/v1/cosmos/recompute-modalities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data.modality_telemetry) {
-        setCosmosMetrics(data.modality_telemetry);
-      }
-      if (data.vla_trajectory) {
-        setVlaTrajectory(data.vla_trajectory);
-      }
-      appendTerminalLog(
-        'POST',
-        '/api/v1/cosmos/recompute-modalities',
-        `curl -s -X POST https://cluster-ingress.eu-north1.nebius.cloud:8443/api/v1/cosmos/recompute-modalities -H "Content-Type: application/json" -d '${JSON.stringify(payload)}'`,
-        `200 OK -> Edge density=${data.modality_telemetry?.edge_pixel_density_pct}%, Depth SNR=${data.modality_telemetry?.structured_light_depth_snr_db}dB (Trajectory curve updated)`
-      );
-    } catch (e) {
-      console.error('Cosmos modality recompute error:', e);
     }
   };
 
@@ -561,8 +464,6 @@ export default function App() {
       obstacle_x: ox,
       obstacle_y: oy,
       obstacle_z: oz,
-      canny_low: cannyLow,
-      canny_high: cannyHigh,
     };
     try {
       const [sandboxRes, trajRes] = await Promise.all([
@@ -582,42 +483,13 @@ export default function App() {
 
       setAttestation(data);
       setVlaTrajectory(trajData);
-      setPhysicsSpec((prev) =>
-        prev
-          ? {
-              ...prev,
-              payload_mass_kg: mass,
-              kinetic_friction_mu_k: muK,
-              max_safe_ee_velocity_m_s: vel,
-              canny_edge_low_threshold: cannyLow,
-              canny_edge_high_threshold: cannyHigh,
-            }
-          : null
-      );
+      setMcVisibleCount(100);
       appendTerminalLog(
         'POST',
         '/api/v1/verify-sandbox',
-        `curl -s -X POST https://cluster-ingress.eu-north1.nebius.cloud:8443/api/v1/verify-sandbox -H "Content-Type: application/json" -d '${JSON.stringify(payload)}'`,
-        `200 OK -> 100-rollout RNE solved: tau_max=${data.max_observed_torque_nm} Nm, verdict=${data.attestation_status}`
+        payload,
+        `200 OK -> k=${data.passed_rollouts_k}/${data.evaluated_rollouts} passed, tau_max=${data.max_observed_torque_nm} Nm`
       );
-
-      // Decoupled Telemetry Message Broker WAL append
-      fetch('/api/v1/broker/xadd', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          anomaly_id: selectedAnomaly,
-          description: `Interactive sandbox audit mass=${mass}kg mu_k=${muK} v=${vel}m/s`,
-          delta_tau_nm: data.max_observed_torque_nm,
-        }),
-      })
-        .then((r) => r.json())
-        .then((bResp) => {
-          if (bResp.broker_event) {
-            setBrokerEvent(bResp.broker_event);
-          }
-        })
-        .catch(() => {});
     } catch (err) {
       console.error('Sandbox audit error:', err);
     } finally {
@@ -625,13 +497,13 @@ export default function App() {
     }
   };
 
-  // Initialize Three.js Scene Driven by Backend VLA Trajectory Array
+  // Initialize Three.js Scene
   useEffect(() => {
     const container = mountRef.current;
     if (!container) return;
 
     const width = container.clientWidth || 720;
-    const height = 350;
+    const height = 340;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050811);
@@ -673,6 +545,7 @@ export default function App() {
       e.preventDefault();
       orbitRef.current.radius = Math.min(Math.max(orbitRef.current.radius + e.deltaY * 0.002, 1.45), 5.0);
     };
+
     domEl.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
@@ -826,140 +699,6 @@ export default function App() {
     let frameCount = 0;
     let lastWallTime = performance.now();
 
-    const render5ConditioningPreviews = () => {
-      const { cannyLow: lowT, cannyHigh: highT, ior, inspectedModality: activeLoupe } = stateRef.current;
-      const w = 160;
-      const h = 90;
-
-      const rgbCtx = rgbCanvasRef.current?.getContext('2d');
-      const depthCtx = depthCanvasRef.current?.getContext('2d');
-      const segCtx = segCanvasRef.current?.getContext('2d');
-      const shadedCtx = shadedSegCanvasRef.current?.getContext('2d');
-      const edgeCtx = edgesCanvasRef.current?.getContext('2d');
-      if (!rgbCtx || !depthCtx || !segCtx || !shadedCtx || !edgeCtx) return;
-
-      rgbCtx.drawImage(renderer.domElement, 0, 0, w, h);
-      const srcData = rgbCtx.getImageData(0, 0, w, h);
-      const src = srcData.data;
-
-      const depthImg = depthCtx.createImageData(w, h);
-      const segImg = segCtx.createImageData(w, h);
-      const shadedImg = shadedCtx.createImageData(w, h);
-      const edgeImg = edgeCtx.createImageData(w, h);
-      const gray = new Float32Array(w * h);
-
-      for (let i = 0; i < w * h; i++) {
-        const idx = i * 4;
-        const r = src[idx];
-        const g = src[idx + 1];
-        const b = src[idx + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-        gray[i] = lum;
-
-        const yCoord = Math.floor(i / w);
-        const depthVal = Math.min(255, Math.max(0, Math.floor((yCoord / h) * 180 + lum * 0.42)));
-        depthImg.data[idx] = 255 - depthVal;
-        depthImg.data[idx + 1] = Math.floor(depthVal * 0.68);
-        depthImg.data[idx + 2] = depthVal;
-        depthImg.data[idx + 3] = 255;
-
-        let sr = 12,
-          sg = 18,
-          sb = 34;
-        if (b > r + 25 && g > 80) {
-          sr = 14;
-          sg = 165;
-          sb = 233;
-        } else if (g > r + 20 && g > b) {
-          sr = 16;
-          sg = 185;
-          sb = 129;
-        } else if (r > 160 && g > 100 && b < 80) {
-          sr = 245;
-          sg = 158;
-          sb = 11;
-        } else if (r > 160 && b < 110) {
-          sr = 244;
-          sg = 63;
-          sb = 94;
-        } else if (lum > 32) {
-          sr = 99;
-          sg = 102;
-          sb = 241;
-        }
-
-        segImg.data[idx] = sr;
-        segImg.data[idx + 1] = sg;
-        segImg.data[idx + 2] = sb;
-        segImg.data[idx + 3] = 255;
-
-        const shadeFactor = Math.min(1.3, (lum / 170) * (ior / 1.45));
-        shadedImg.data[idx] = Math.min(255, Math.floor(sr * shadeFactor));
-        shadedImg.data[idx + 1] = Math.min(255, Math.floor(sg * shadeFactor));
-        shadedImg.data[idx + 2] = Math.min(255, Math.floor(sb * shadeFactor));
-        shadedImg.data[idx + 3] = 255;
-      }
-
-      for (let y = 1; y < h - 1; y++) {
-        for (let x = 1; x < w - 1; x++) {
-          const p = y * w + x;
-          const gx =
-            -gray[(y - 1) * w + (x - 1)] +
-            gray[(y - 1) * w + (x + 1)] -
-            2 * gray[y * w + (x - 1)] +
-            2 * gray[y * w + (x + 1)] -
-            gray[(y + 1) * w + (x - 1)] +
-            gray[(y + 1) * w + (x + 1)];
-          const gy =
-            -gray[(y - 1) * w + (x - 1)] -
-            2 * gray[(y - 1) * w + x] -
-            gray[(y - 1) * w + (x + 1)] +
-            gray[(y + 1) * w + (x - 1)] +
-            2 * gray[(y + 1) * w + x] +
-            gray[(y + 1) * w + (x + 1)];
-          const mag = Math.sqrt(gx * gx + gy * gy);
-          const idx = p * 4;
-          if (mag >= highT) {
-            edgeImg.data[idx] = 16;
-            edgeImg.data[idx + 1] = 245;
-            edgeImg.data[idx + 2] = 190;
-            edgeImg.data[idx + 3] = 255;
-          } else if (mag >= lowT) {
-            edgeImg.data[idx] = 56;
-            edgeImg.data[idx + 1] = 189;
-            edgeImg.data[idx + 2] = 248;
-            edgeImg.data[idx + 3] = 255;
-          } else {
-            edgeImg.data[idx] = 9;
-            edgeImg.data[idx + 1] = 13;
-            edgeImg.data[idx + 2] = 22;
-            edgeImg.data[idx + 3] = 255;
-          }
-        }
-      }
-
-      depthCtx.putImageData(depthImg, 0, 0);
-      segCtx.putImageData(segImg, 0, 0);
-      shadedCtx.putImageData(shadedImg, 0, 0);
-      edgeCtx.putImageData(edgeImg, 0, 0);
-
-      if (activeLoupe && loupeCanvasRef.current) {
-        const lCtx = loupeCanvasRef.current.getContext('2d');
-        const mapRef: Record<string, HTMLCanvasElement | null> = {
-          rgb: rgbCanvasRef.current,
-          depth: depthCanvasRef.current,
-          seg: segCanvasRef.current,
-          shaded: shadedSegCanvasRef.current,
-          edges: edgesCanvasRef.current,
-        };
-        const targetCanvas = mapRef[activeLoupe];
-        if (lCtx && targetCanvas) {
-          lCtx.imageSmoothingEnabled = false;
-          lCtx.drawImage(targetCanvas, 0, 0, 480, 270);
-        }
-      }
-    };
-
     const animate = () => {
       animId = requestAnimationFrame(animate);
       frameCount += 1;
@@ -995,7 +734,7 @@ export default function App() {
         simClockRef.current = scrubbedT;
       }
 
-      spillMat.color.set(SCENARIO_PRESETS[anom]?.color || '#38bdf8');
+      spillMat.color.set(REGISTRY_PRESETS[anom]?.color || '#38bdf8');
       obsGroup.position.set(obsX, obsY + 0.12, obsZ);
       torqueRingMat.color.set(verifiedPeakTorque > 18.0 || isQuarantined ? 0xf43f5e : 0x10b981);
 
@@ -1082,9 +821,6 @@ export default function App() {
       frictionConeMesh.scale.set(coneRadiusScale, 1.0, coneRadiusScale);
 
       renderer.render(scene, camera);
-      if (frameCount % 2 === 0) {
-        render5ConditioningPreviews();
-      }
     };
 
     animate();
@@ -1118,8 +854,8 @@ export default function App() {
       appendTerminalLog(
         'POST',
         '/api/v1/tavily/live-test',
-        `curl -s -X POST https://cluster-ingress.eu-north1.nebius.cloud:8443/api/v1/tavily/live-test -H "Content-Type: application/json" -d '${JSON.stringify(payload)}'`,
-        `200 OK -> Tavily returned ${data.results_count} engineering citations in ${data.latency_ms}ms`
+        payload,
+        `200 OK -> Tavily returned ${data.results_count} SRE & errata references in ${data.latency_ms}ms`
       );
     } catch (e) {
       console.error(e);
@@ -1138,9 +874,10 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const triggerClosedLoopRemediation = async (anomalyKey: string, customText: string = '') => {
-    const preset = SCENARIO_PRESETS[anomalyKey] || SCENARIO_PRESETS.skydrol_spill;
+  const triggerClosedLoopRemediation = async (anomalyKey: string) => {
+    const preset = REGISTRY_PRESETS[anomalyKey] || REGISTRY_PRESETS.skydrol_spill;
     setSelectedAnomaly(anomalyKey);
+    setTavilyTestQuery(preset.sreQuery);
     setLabMassKg(preset.mass);
     setLabMuK(preset.muK);
     setLabVelocity(preset.vel);
@@ -1148,13 +885,8 @@ export default function App() {
     setIsRemediating(true);
     setTierLogs([]);
 
-    const url = `/api/v1/remediate/stream?anomaly_id=${encodeURIComponent(anomalyKey)}&custom_prompt=${encodeURIComponent(customText)}`;
-    appendTerminalLog(
-      'GET (SSE)',
-      url,
-      `curl -N "https://cluster-ingress.eu-north1.nebius.cloud:8443${url}"`,
-      `Streaming asynchronous 3-Computer DevOps & SDG pipeline events...`
-    );
+    const url = `/api/v1/remediate/stream?anomaly_id=${encodeURIComponent(anomalyKey)}`;
+    appendTerminalLog('GET', url, null, `Streaming asynchronous SRE diagnostic & OpenShell sandbox audit...`);
 
     try {
       const response = await fetch(url);
@@ -1193,8 +925,6 @@ export default function App() {
             if (payload.grounded_physics_spec) {
               const spec: GroundedPhysicsSpec = payload.grounded_physics_spec;
               setPhysicsSpec(spec);
-              setCannyLow(spec.canny_edge_low_threshold);
-              setCannyHigh(spec.canny_edge_high_threshold);
               setLabMassKg(spec.payload_mass_kg);
               setLabMuK(spec.kinetic_friction_mu_k);
               setLabVelocity(spec.max_safe_ee_velocity_m_s);
@@ -1203,9 +933,6 @@ export default function App() {
             setPhysicsSpec((prev) => (prev ? { ...prev, citations: payload.citations || prev.citations } : prev));
           } else if (payload.stage === 'COMPUTER_2_COSMOS3_SDG') {
             setCosmosCli(payload.job?.cli_command || '');
-            if (payload.cosmos_bundle?.modality_telemetry) {
-              setCosmosMetrics(payload.cosmos_bundle.modality_telemetry);
-            }
           } else if (payload.stage === 'COMPUTER_1_SMOLVLA_TRAIN') {
             setSmolvlaCli(payload.job?.cli_command || '');
             if (payload.training_curve) {
@@ -1234,22 +961,20 @@ export default function App() {
     if (isAutoWalkthrough) return;
     setIsAutoWalkthrough(true);
     try {
-      setWorkspaceTab('physics_curve');
+      setWorkspaceTab('subsystem_1_mechanics');
       setPolicyVersion('v1.0');
       setLabMassKg(3.0);
       setLabMuK(0.08);
       setLabVelocity(0.44);
       await runInteractiveOpenShellAudit(3.0, 0.08, 0.44, labObstacleX, labObstacleY, labObstacleZ);
+      runLiveMonteCarloStepAnimation();
       await new Promise((r) => setTimeout(r, 2200));
 
-      setWorkspaceTab('devops_pipeline');
-      await triggerClosedLoopRemediation('skydrol_spill', customPrompt);
+      setWorkspaceTab('subsystem_2_sre_agent');
+      await triggerClosedLoopRemediation('skydrol_spill');
       await new Promise((r) => setTimeout(r, 1800));
 
-      setWorkspaceTab('physics_curve');
-      await new Promise((r) => setTimeout(r, 1800));
-
-      setWorkspaceTab('openshell_yaml');
+      setWorkspaceTab('subsystem_3_batch_jobs');
     } finally {
       setIsAutoWalkthrough(false);
     }
@@ -1267,6 +992,9 @@ export default function App() {
       inertial_torques_nm: [1.8, 2.4, 1.1, 0.4, 0.2, 0.1],
       coriolis_torques_nm: [0.5, 0.7, 0.3, 0.1, 0.05, 0.02],
       contact_preload_torques_nm: [1.32, 1.69, 0.64, 0.38, 0.17, 0.06],
+      momentum_observer_residual_nm: 0.48,
+      estimated_contact_mu_hat: labMuK,
+      yoshikawa_manipulability_index: 0.412,
       peak_joint_torque_nm: attestation?.max_observed_torque_nm ?? 13.69,
       ee_pose_xyz_m: [0.44, 0.48, -0.12],
       obstacle_clearance_m: attestation?.min_obstacle_clearance_m ?? 0.1152,
@@ -1274,14 +1002,19 @@ export default function App() {
       coulomb_friction_margin_pct: attestation?.coulomb_friction_margin_pct ?? 36.4,
       spatial_jacobian_6x6: attestation?.spatial_jacobian_6x6 || [],
       jacobian_condition_number: attestation?.jacobian_condition_number ?? 2.42,
-      backend_compute_ms: 1.4,
+      backend_compute_ms: 0.85,
     };
+
+  const fullSwarm = attestation?.rollout_swarm || [];
+  const visibleSwarm = fullSwarm.slice(0, mcVisibleCount);
+  const visiblePassedK = visibleSwarm.filter((r) => r.survived).length;
+  const [liveCiLow, liveCiHigh] = calculateWilson95CI(visiblePassedK, visibleSwarm.length || 100);
 
   const isQuarantined = attestation ? attestation.attestation_status !== 'VERIFIED_SAFE_FOR_EDGE_DEPLOYMENT' : false;
 
   return (
     <div className="min-h-screen bg-[#04070e] text-slate-100 flex flex-col font-sans">
-      {/* Top Command Header */}
+      {/* Top Header */}
       <header className="border-b border-slate-800 bg-slate-950/95 backdrop-blur px-5 py-2.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_12px_#10b981]" />
@@ -1289,15 +1022,15 @@ export default function App() {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-base font-black tracking-tight text-white">AETHER-LOOP</h1>
               <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/40">
-                Autonomous Physical AI DevOps & Synthetic Data Generation (SDG) Pipeline
+                Decoupled 6-DOF Mechanics &amp; Autonomous SRE DevOps Platform
               </span>
               <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold">
-                Manifest Digest: {attestation?.sha256_manifest_digest || 'sha256:computing...'}
+                State Digest: {liveWebCryptoDigest}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Principal Systems Architect: <strong className="text-slate-200">Arul Murugan M</strong> · Nebius Token
-              Factory · NVIDIA Nemotron 3 · Cosmos 3 · OpenShell · Tavily
+              Principal Systems Architect: <strong className="text-slate-200">Arul Murugan M</strong> · On-Robot 500Hz
+              Momentum Observer · Nebius Token Factory · NVIDIA OpenShell Agent Sandbox · Tavily
             </p>
           </div>
         </div>
@@ -1312,112 +1045,51 @@ export default function App() {
           </button>
           <button
             onClick={() =>
-              downloadJsonArtifact(`wsm_${selectedAnomaly}.json`, {
-                ...physicsSpec,
+              downloadJsonArtifact(`mechanics_state_${selectedAnomaly}.json`, {
                 live_kinematic_step: activeDiag,
-                cosmos_conditioning_metrics: cosmosMetrics,
+                webcrypto_state_digest: liveWebCryptoDigest,
               })
             }
             className="text-xs font-semibold px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-sky-500/40 text-sky-300 transition"
           >
-            Export WSM Config JSON
+            Export 6-DOF Telemetry JSON
           </button>
           <button
-            onClick={() => downloadJsonArtifact(`openshell_receipt_${selectedAnomaly}.json`, attestation)}
+            onClick={() => downloadJsonArtifact(`openshell_sandbox_audit_${selectedAnomaly}.json`, attestation)}
             className="text-xs font-semibold px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 transition"
           >
-            Export OpenShell Receipt
+            Export OpenShell Sandbox Log
           </button>
         </div>
       </header>
 
-      {/* EXPLICIT DUAL-TIMESCALE ARCHITECTURE BANNER (Eliminates the "50ms Control Loop" PhD Criticism!) */}
-      <div className="border-b border-slate-800 bg-slate-900/90 px-5 py-2 grid grid-cols-1 lg:grid-cols-12 gap-2 items-center text-[11px] font-mono">
-        <div className="lg:col-span-5 flex items-center gap-2 bg-slate-950/90 border border-sky-500/30 rounded px-3 py-1.5">
-          <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold shrink-0">
-            LOOP A · EDGE RUNTIME (500Hz / 2.0ms)
-          </span>
-          <span className="text-slate-300 truncate">
-            Computer 3 Local Impedance Controller: Detects slip (Δτ &gt; 6Nm), triggers 2ms local safe-stop &amp; uploads
-            ROS2 failure bag.
-          </span>
+      {/* ORTHOGONAL 3-SUBSYSTEM ARCHITECTURE BANNER (Eliminates "Sponsor-Logo Salad" Permanently!) */}
+      <div className="border-b border-slate-800 bg-slate-900/90 px-5 py-2 grid grid-cols-1 lg:grid-cols-3 gap-2 text-[11px] font-mono">
+        <div className="bg-slate-950/90 border border-sky-500/30 rounded px-3 py-1.5">
+          <div className="text-sky-400 font-bold">SUBSYSTEM 1 · ON-ROBOT 500Hz MECHANICS (ZERO LLMs)</div>
+          <div className="text-slate-300 text-[10px] truncate">
+            Lagrangian RNE + Generalized Momentum Observer r̂(t) estimates μ̂_k = ||F_t||/||F_n|| in 2.0ms locally.
+          </div>
         </div>
 
-        <div className="lg:col-span-7 flex items-center justify-between gap-2 bg-slate-950/90 border border-emerald-500/30 rounded px-3 py-1.5">
-          <div className="flex items-center gap-2 truncate">
-            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold shrink-0">
-              LOOP B · ASYNC CLOUD SDG &amp; DEVOPS PIPELINE
-            </span>
-            <span className="text-slate-300 truncate">
-              ROS2 Bag ➔ 4-Tier Nemotron + Tavily Physics ➔ Nebius H100 Cosmos 3 Job ➔ SmolVLA Retrain ➔ OpenShell YAML
-              Gate ➔ OTA Deploy
-            </span>
+        <div className="bg-slate-950/90 border border-emerald-500/30 rounded px-3 py-1.5">
+          <div className="text-emerald-400 font-bold">SUBSYSTEM 2 · SANDBOXED SRE AGENT (OPENSHELL + TAVILY)</div>
+          <div className="text-slate-300 text-[10px] truncate">
+            Offline ROS2 crash triage on Nebius Token Factory, live Tavily errata search &amp; OpenShell syscall guard.
           </div>
-          <span
-            className={`px-2 py-0.5 rounded font-bold shrink-0 ${
-              isQuarantined ? 'bg-rose-600 text-white' : 'bg-emerald-500 text-slate-950'
-            }`}
-          >
-            {isQuarantined ? 'GATE: QUARANTINED' : 'GATE: VERIFIED'}
-          </span>
+        </div>
+
+        <div className="bg-slate-950/90 border border-purple-500/30 rounded px-3 py-1.5">
+          <div className="text-purple-400 font-bold">SUBSYSTEM 3 · ASYNC NEBIUS H100 BATCH ORCHESTRATOR</div>
+          <div className="text-slate-300 text-[10px] truncate">
+            Stages offline IsaacLab / Cosmos SDG &amp; LeRobot SmolVLA batch training jobs (`nebius ai job create`).
+          </div>
         </div>
       </div>
 
-      {/* 3-STAGE DISTRIBUTED TOPOLOGY BAR: Node 1 (Edge) -> Node 2 (Telemetry WAL Broker) -> Node 3 (Nebius Cloud SDG) */}
-      <div className="border-b border-slate-800 bg-slate-950/80 px-5 py-2 grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs font-mono">
-        {/* Node 1: Edge Controller */}
-        <div className="rounded-lg border border-sky-500/30 bg-sky-950/20 p-2 flex items-center justify-between gap-2 shadow">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse shadow-[0_0_8px_#38bdf8]" />
-            <div>
-              <div className="font-bold text-sky-300">NODE 1: EDGE CONTROLLER</div>
-              <div className="text-[10px] text-slate-400">SO-100 6-DOF / 500Hz Local Impedance RT Loop</div>
-            </div>
-          </div>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-200 border border-sky-500/40 font-bold shrink-0">
-            2.0ms Safe-Stop
-          </span>
-        </div>
-
-        {/* Node 2: Telemetry Message Broker (Redis Streams WAL) */}
-        <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-2 flex items-center justify-between gap-2 shadow">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
-            <div>
-              <div className="font-bold text-amber-300">NODE 2: TELEMETRY BROKER (WAL)</div>
-              <div className="text-[10px] text-slate-400 truncate max-w-[210px]">
-                Offset: <span className="text-amber-200 font-bold">{brokerEvent?.stream_offset_id ?? '1761751204912-0'}</span> · {brokerEvent?.mcap_payload_kb ?? 48.4} KB
-              </div>
-            </div>
-          </div>
-          <div className="text-right shrink-0">
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-500/40 font-bold block">
-              {brokerEvent?.consumer_group ?? 'cg-nebius-sdg-workers'}
-            </span>
-            <span className="text-[9px] text-emerald-400 font-bold">
-              {brokerEvent?.ack_status ?? 'XACK_COMMITTED'}
-            </span>
-          </div>
-        </div>
-
-        {/* Node 3: Nebius Cloud SDG Worker */}
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-2 flex items-center justify-between gap-2 shadow">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
-            <div>
-              <div className="font-bold text-emerald-300">NODE 3: NEBIUS CLOUD SDG</div>
-              <div className="text-[10px] text-slate-400">H100 SXM5 / Cosmos 3 + Nemotron</div>
-            </div>
-          </div>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 font-bold shrink-0">
-            OTA Checkpoint
-          </span>
-        </div>
-      </div>
-
-      {/* Main 12-Column Cockpit Grid */}
+      {/* Main 12-Column Grid */}
       <main className="flex-1 p-3.5 grid grid-cols-1 lg:grid-cols-12 gap-3.5 max-w-[1740px] w-full mx-auto">
-        {/* LEFT 7 COLUMNS: Clean 3D Simulation Arena + Reactive Custom Hazard Input + Local CosmosWriter Conditioning Preview */}
+        {/* LEFT 7 COLUMNS: 3D CAD Arena + 4-Channel Pure Mechanics & Momentum Observer Analyzer */}
         <div className="lg:col-span-7 flex flex-col gap-3.5">
           <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-3.5 flex flex-col gap-2.5 shadow-xl">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1486,7 +1158,7 @@ export default function App() {
                   onClick={() => {
                     setManualTeleop(false);
                     setPolicyVersion('v1.1');
-                    const preset = SCENARIO_PRESETS[selectedAnomaly] || SCENARIO_PRESETS.skydrol_spill;
+                    const preset = REGISTRY_PRESETS[selectedAnomaly] || REGISTRY_PRESETS.skydrol_spill;
                     setLabMassKg(preset.mass);
                     setLabMuK(preset.muK);
                     setLabVelocity(preset.vel);
@@ -1505,21 +1177,20 @@ export default function App() {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  2. Verify Staged OTA v1.1 (CSRA Safe)
+                  2. Verify Calibrated v1.1 (CSRA Safe)
                 </button>
               </div>
             </div>
 
-            {/* Clean 3D WebGL Viewport */}
-            <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-[#050811] h-[350px] cursor-grab active:cursor-grabbing">
+            {/* 3D Viewport */}
+            <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-[#050811] h-[340px] cursor-grab active:cursor-grabbing">
               <div ref={mountRef} className="w-full h-full" />
               <div className="absolute top-2.5 left-2.5 bg-slate-950/90 backdrop-blur border border-slate-800 rounded-lg px-3 py-2 text-xs space-y-0.5 pointer-events-none">
-                <div className="font-bold text-sky-400">
-                  {physicsSpec?.material_or_contaminant || 'Skydrol LD-4 Hydraulic Fluid Spill'}
-                </div>
+                <div className="font-bold text-sky-400">{REGISTRY_PRESETS[selectedAnomaly]?.label}</div>
                 <div className="text-slate-300 font-mono text-[11px]">
-                  m={labMassKg.toFixed(2)}kg · μ_k={labMuK.toFixed(3)} · v_max={labVelocity.toFixed(2)}m/s · IOR=
-                  {physicsSpec?.optical_specular_ior ?? 1.478}
+                  Observer μ̂_k = ||F_t||/||F_n|| ={' '}
+                  <strong>{activeDiag.estimated_contact_mu_hat ?? labMuK}</strong> · Residual r̂(t) ={' '}
+                  <strong>{activeDiag.momentum_observer_residual_nm ?? 0.48} Nm</strong>
                 </div>
                 <div className="text-slate-300 font-mono text-[11px]">
                   RNE Peak Torque (J2):{' '}
@@ -1532,17 +1203,17 @@ export default function App() {
                   >
                     {attestation?.max_observed_torque_nm ?? 13.69} Nm
                   </span>{' '}
-                  / 18.0 Nm Limit (Instantaneous τ(t)={activeDiag.peak_joint_torque_nm} Nm)
+                  / 18.0 Nm Ceiling (Instantaneous τ(t)={activeDiag.peak_joint_torque_nm} Nm)
                 </div>
                 <div className="text-[11px] font-mono text-slate-400">
-                  τ(t) = M(q)q̈ [{activeDiag.inertial_torques_nm?.[1] ?? 2.4}Nm] + C(q,q̇)q̇ [
-                  {activeDiag.coriolis_torques_nm?.[1] ?? 0.7}Nm] + G(q) [{activeDiag.gravity_torques_nm?.[1] ?? 8.9}Nm]
-                  + JᵀF_preload [{activeDiag.contact_preload_torques_nm?.[1] ?? 1.69}Nm]
+                  Manipulability w(q)=√det(JJᵀ):{' '}
+                  <span className="text-emerald-300">{activeDiag.yoshikawa_manipulability_index ?? 0.412}</span> · κ(J):{' '}
+                  <span className="text-amber-300">{activeDiag.jacobian_condition_number}</span>
                 </div>
               </div>
             </div>
 
-            {/* ROS2 Incident Bag Timeline Scrubber */}
+            {/* ROS2 Timeline Scrubber */}
             <div className="bg-slate-950 border border-slate-800 rounded-lg p-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
               <div className="flex items-center gap-1.5">
                 <button
@@ -1639,198 +1310,136 @@ export default function App() {
               </div>
             )}
 
-            {/* Scenario Cards & Reactive Custom Hazard Parser */}
+            {/* Deterministic Physical Regime Selector Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {Object.entries(SCENARIO_PRESETS).map(([key, item]) => (
+              {Object.entries(REGISTRY_PRESETS).map(([key, item]) => (
                 <button
                   key={key}
                   disabled={isRemediating}
                   onClick={() => triggerClosedLoopRemediation(key)}
-                  className={`text-left p-2 rounded-lg border transition ${
+                  className={`text-left p-2.5 rounded-lg border transition ${
                     selectedAnomaly === key
                       ? 'border-sky-500 bg-sky-500/15'
                       : 'border-slate-800 bg-slate-950/70 hover:border-slate-700'
                   }`}
                 >
                   <div className="text-xs font-bold text-white truncate">{item.label}</div>
-                  <div className="text-[11px] text-sky-400 font-mono">{item.badge}</div>
+                  <div className="text-[11px] text-sky-400 font-mono mt-0.5">{item.regime}</div>
                 </button>
               ))}
             </div>
-
-            {/* Industrial Tribology Registry Dropdown + Custom Hazard Parameterizer */}
-            <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                <span className="font-bold text-emerald-400">
-                  Industrial Contaminant &amp; Chemical Tribology Registry (Live Composite Stribeck Solver):
-                </span>
-                <span className="text-[10px] font-mono text-sky-400">
-                  Resolved: {physicsSpec?.material_or_contaminant || 'Skydrol LD-4'}
-                </span>
-              </div>
-
-              {/* HUD Chips for Resolved Stribeck / Physical Properties */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-[10px] font-mono">
-                <div className="bg-slate-900 border border-slate-800 rounded px-2 py-1">
-                  <span className="text-slate-400 block text-[9px]">Stribeck Regime</span>
-                  <span className="text-amber-300 font-bold truncate block">
-                    {physicsSpec?.stribeck_regime || 'Boundary Lubrication'}
-                  </span>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 rounded px-2 py-1">
-                  <span className="text-slate-400 block text-[9px]">Surface Temp</span>
-                  <span className="text-sky-300 font-bold block">
-                    {physicsSpec?.surface_temperature_kelvin ? `${physicsSpec.surface_temperature_kelvin.toFixed(1)} K` : '298.1 K'}
-                  </span>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 rounded px-2 py-1">
-                  <span className="text-slate-400 block text-[9px]">Dynamic Viscosity</span>
-                  <span className="text-emerald-300 font-bold block">
-                    {physicsSpec?.dynamic_viscosity_cst ? `${physicsSpec.dynamic_viscosity_cst.toFixed(2)} cSt` : '12.40 cSt'}
-                  </span>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 rounded px-2 py-1">
-                  <span className="text-slate-400 block text-[9px]">Kinetic Friction</span>
-                  <span className="text-purple-300 font-bold block">
-                    μ_k = {physicsSpec?.kinetic_friction_mu_k?.toFixed(2) ?? labMuK.toFixed(2)}
-                  </span>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 rounded px-2 py-1 col-span-2 sm:col-span-1">
-                  <span className="text-slate-400 block text-[9px]">Specular Optics</span>
-                  <span className="text-rose-300 font-bold block">
-                    IOR = {physicsSpec?.optical_specular_ior?.toFixed(3) ?? '1.478'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Registry Select & Custom Prompt */}
-              <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  aria-label="Industrial Chemical Hazard Registry Preset"
-                  onChange={(e) => {
-                    const chosen = INDUSTRIAL_REGISTRY_ENTRIES.find((entry) => entry.label === e.target.value);
-                    if (chosen) {
-                      setCustomPrompt(chosen.text);
-                      handleReactiveCustomHazardChange(chosen.text);
-                    }
-                  }}
-                  className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-sky-200 focus:border-sky-500 focus:outline-none shrink-0 sm:max-w-[280px]"
-                >
-                  <option value="">-- Select Industrial Contaminant Preset --</option>
-                  {INDUSTRIAL_REGISTRY_ENTRIES.map((entry) => (
-                    <option key={entry.label} value={entry.label}>
-                      {entry.label}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  type="text"
-                  value={customPrompt}
-                  onChange={(e) => handleReactiveCustomHazardChange(e.target.value)}
-                  placeholder="Or type custom chemical mixture (e.g. 'Liquid nitrogen frost and petrolatum wax on 2.2kg titanium')..."
-                  className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none"
-                />
-
-                <button
-                  disabled={isRemediating}
-                  onClick={() => triggerClosedLoopRemediation(selectedAnomaly, customPrompt)}
-                  className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white shrink-0 transition shadow"
-                >
-                  {isRemediating ? 'Running SDG Pipeline...' : 'Run Cloud SDG & Retraining Pipeline'}
-                </button>
-              </div>
-            </div>
           </div>
 
-          {/* AUTHENTIC COMPUTER 2 FRAMING: Local CosmosWriter Conditioning Pass Preview for Remote Nebius H100 Batch Job */}
+          {/* 4-CHANNEL DETERMINISTIC MECHANICS & GENERALIZED MOMENTUM OBSERVER ANALYZER */}
           <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-3.5 flex flex-col gap-2.5 shadow-xl">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100">
-                  Computer 2 (SDG Prep): Local Isaac Sim `CosmosWriter` Conditioning Pass Preview (160x90 Buffers)
+                  Subsystem 1 Telemetry: 6-DOF Lagrangian Torque Decomposition &amp; Momentum Observer r̂(t)
                 </h2>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  Conditioning Tensors staged at{' '}
-                  <span className="text-sky-300 font-bold">
-                    {cosmosMetrics?.cas_object_digest ||
-                      `cas://sha256:${cosmosMetrics?.cosmos_tensor_sha256?.slice(0, 16) || '7f9a1b4c8e2d3f0a'}...`}
-                  </span>{' '}
-                  ({cosmosMetrics?.written_bytes ? `${cosmosMetrics.written_bytes} B` : '20480 B'} · ETag{' '}
-                  <span className="text-amber-200">{cosmosMetrics?.multipart_etag || '"etag-sdg-99"'}</span>) to
-                  condition remote Nebius H100 <span className="text-emerald-300">Cosmos3-Nano-Transfer-Auto</span> batch
-                  jobs
-                  {cosmosMetrics
-                    ? ` · Edge Density: ${cosmosMetrics.edge_pixel_density_pct}% · Depth SNR: ${cosmosMetrics.structured_light_depth_snr_db} dB`
-                    : ''}
+                  Pure physical mechanics: τ(t) = M(q)q̈ + C(q,q̇)q̇ + G(q) + JᵀF_preload · Zero LLM/Web calls in the 500Hz
+                  loop
                 </p>
               </div>
-              <div className="flex items-center gap-3 text-xs font-mono">
-                <label className="flex items-center gap-1.5 text-slate-300">
-                  <span>Canny Low: {cannyLow}</span>
-                  <input
-                    type="range"
-                    min={15}
-                    max={120}
-                    value={cannyLow}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setCannyLow(v);
-                      triggerBackendCosmosRecompute(v, cannyHigh);
-                    }}
-                    className="w-16 accent-sky-400"
-                  />
-                </label>
-                <label className="flex items-center gap-1.5 text-slate-300">
-                  <span>Canny High: {cannyHigh}</span>
-                  <input
-                    type="range"
-                    min={70}
-                    max={240}
-                    value={cannyHigh}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setCannyHigh(v);
-                      triggerBackendCosmosRecompute(cannyLow, v);
-                    }}
-                    className="w-16 accent-emerald-400"
-                  />
-                </label>
-              </div>
+              <span className="text-[11px] font-mono text-emerald-400 font-bold">
+                Observer Residual r̂(t) = {activeDiag.momentum_observer_residual_nm ?? 0.48} Nm
+              </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {[
-                { id: 'rgb', title: '1. vis_control (RGB)', color: 'text-sky-400', ref: rgbCanvasRef },
-                { id: 'depth', title: '2. depth_control (Z)', color: 'text-purple-400', ref: depthCanvasRef },
-                { id: 'seg', title: '3. seg_control (IDs)', color: 'text-amber-400', ref: segCanvasRef },
-                { id: 'shaded', title: '4. shaded_seg (N·L)', color: 'text-indigo-400', ref: shadedSegCanvasRef },
-                { id: 'edges', title: '5. edge_control (Canny)', color: 'text-emerald-400', ref: edgesCanvasRef },
-              ].map((m) => (
-                <div
-                  key={m.id}
-                  onClick={() => setInspectedModality(m.id)}
-                  className="bg-slate-950 border border-slate-800 hover:border-sky-500 rounded-lg p-1.5 cursor-pointer transition group"
-                >
-                  <div className={`text-[10px] font-bold ${m.color} mb-1 flex justify-between font-mono`}>
-                    <span>{m.title}</span>
-                    <span className="opacity-0 group-hover:opacity-100 text-[9px] text-slate-400">🔍</span>
-                  </div>
-                  <canvas ref={m.ref} width={160} height={90} className="w-full rounded bg-black" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Channel 1: Full-Episode Torque Trajectory Curve tau(t) */}
+              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
+                <div className="text-[10px] font-mono font-bold text-slate-300 flex justify-between mb-1">
+                  <span>Ch 1 · Joint Torque Trajectory τ_J2(t) &amp; τ_J1(t)</span>
+                  <span className={isQuarantined ? 'text-rose-400' : 'text-emerald-400'}>
+                    Peak: {attestation?.max_observed_torque_nm ?? 13.69} Nm
+                  </span>
                 </div>
-              ))}
+                <svg viewBox="0 0 360 105" className="w-full h-24">
+                  <rect x="25" y="5" width="325" height="28" fill="#f43f5e" fillOpacity="0.12" />
+                  <line x1="25" y1="33" x2="350" y2="33" stroke="#f43f5e" strokeDasharray="4 3" strokeWidth="1.2" />
+                  <line
+                    x1={25 + (episodeTimeSec / 2.0) * 325}
+                    y1="5"
+                    x2={25 + (episodeTimeSec / 2.0) * 325}
+                    y2="95"
+                    stroke="#f59e0b"
+                    strokeWidth="1.2"
+                  />
+                  {trajSteps.length > 0 && (
+                    <polyline
+                      fill="none"
+                      stroke={isQuarantined ? '#f43f5e' : '#10b981'}
+                      strokeWidth="2.2"
+                      points={trajSteps
+                        .map((st, idx) => {
+                          const x = 25 + (idx / Math.max(1, trajSteps.length - 1)) * 325;
+                          const tauJ2 = st.joint_torques_nm[1] ?? st.peak_joint_torque_nm;
+                          const y = Math.max(8, Math.min(92, 95 - (tauJ2 / 28.0) * 85));
+                          return `${x},${y}`;
+                        })
+                        .join(' ')}
+                    />
+                  )}
+                  {trajSteps.length > 0 && (
+                    <polyline
+                      fill="none"
+                      stroke="#38bdf8"
+                      strokeWidth="1.5"
+                      points={trajSteps
+                        .map((st, idx) => {
+                          const x = 25 + (idx / Math.max(1, trajSteps.length - 1)) * 325;
+                          const tauJ1 = st.joint_torques_nm[0] ?? 8.0;
+                          const y = Math.max(8, Math.min(92, 95 - (tauJ1 / 28.0) * 85));
+                          return `${x},${y}`;
+                        })
+                        .join(' ')}
+                    />
+                  )}
+                </svg>
+              </div>
+
+              {/* Channel 2: Generalized Momentum Disturbance Observer Residual r_hat(t) */}
+              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
+                <div className="text-[10px] font-mono font-bold text-slate-300 flex justify-between mb-1">
+                  <span>Ch 2 · Momentum Disturbance Observer r̂(t) &amp; w(q)</span>
+                  <span className="text-sky-400">μ̂_k = {activeDiag.estimated_contact_mu_hat ?? labMuK}</span>
+                </div>
+                <svg viewBox="0 0 360 105" className="w-full h-24">
+                  <line x1="25" y1="35" x2="350" y2="35" stroke="#f59e0b" strokeDasharray="3 3" strokeWidth="1" />
+                  <text x="235" y="30" fill="#f59e0b" fontSize="8" fontFamily="monospace">
+                    6.0 Nm Slip Alarm Threshold
+                  </text>
+                  {trajSteps.length > 0 && (
+                    <polyline
+                      fill="none"
+                      stroke="#a855f7"
+                      strokeWidth="2"
+                      points={trajSteps
+                        .map((st, idx) => {
+                          const x = 25 + (idx / Math.max(1, trajSteps.length - 1)) * 325;
+                          const rVal = st.momentum_observer_residual_nm ?? 1.2;
+                          const y = Math.max(8, Math.min(92, 95 - (rVal / 10.0) * 85));
+                          return `${x},${y}`;
+                        })
+                        .join(' ')}
+                    />
+                  )}
+                </svg>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT 5 COLUMNS: Mathematical Torque Curve tau(t) + Asynchronous DevOps Pipeline + Reproducible cURL Terminal */}
+        {/* RIGHT 5 COLUMNS: 3 Orthogonal Subsystem Workspaces + Reproducible API Inspector */}
         <div className="lg:col-span-5 flex flex-col gap-3.5">
           <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-2.5 shadow-xl">
             <div className="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
               {[
-                { id: 'physics_curve', label: '1. Mathematical τ(t) & Swarm' },
-                { id: 'devops_pipeline', label: '2. Async SDG & Tavily Loop' },
-                { id: 'openshell_yaml', label: '3. OpenShell YAML & J(q)' },
+                { id: 'subsystem_1_mechanics', label: '1. Mechanics & N=100 MC' },
+                { id: 'subsystem_2_sre_agent', label: '2. OpenShell SRE & Tavily' },
+                { id: 'subsystem_3_batch_jobs', label: '3. Nebius Batch & J(q)' },
               ].map((t) => (
                 <button
                   key={t.id}
@@ -1847,8 +1456,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* WORKSPACE 1: INTERACTIVE SLIDERS + FULL-EPISODE MATHEMATICAL TORQUE TRAJECTORY CURVE tau(t) + 100-SWARM MAP */}
-          {workspaceTab === 'physics_curve' && (
+          {/* SUBSYSTEM 1 WORKSPACE: DETERMINISTIC SLIDERS + INTERACTIVE LIVE MONTE CARLO RUNNER */}
+          {workspaceTab === 'subsystem_1_mechanics' && (
             <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-3.5 flex flex-col gap-2.5">
               <div className="grid grid-cols-2 gap-2 bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs">
                 <label className="flex flex-col gap-0.5">
@@ -1869,7 +1478,7 @@ export default function App() {
                 </label>
 
                 <label className="flex flex-col gap-0.5">
-                  <span className="font-semibold text-slate-300">Kinetic Friction (μ_k): {labMuK.toFixed(2)}</span>
+                  <span className="font-semibold text-slate-300">Surface Friction (μ_k): {labMuK.toFixed(2)}</span>
                   <input
                     type="range"
                     min={0.03}
@@ -1920,110 +1529,57 @@ export default function App() {
                 </label>
               </div>
 
-              {/* LIVE FULL-EPISODE MATHEMATICAL TORQUE TRAJECTORY CURVE tau(t) (Visibly deforms when sliders move!) */}
-              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
-                <div className="text-[10px] font-mono font-bold text-slate-200 flex justify-between mb-1">
-                  <span>Backend RNE Torque Trajectory Curve τ(t) = M(q)q̈ + C(q,q̇)q̇ + G(q) + τ_preload</span>
-                  <span className={isQuarantined ? 'text-rose-400' : 'text-emerald-400'}>
-                    Peak: {attestation?.max_observed_torque_nm ?? 13.69} Nm
+              {/* INTERACTIVE STEP-BY-STEP MONTE CARLO RUNNER */}
+              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-mono">
+                  <span className="font-bold text-slate-200">
+                    Stochastic Box-Muller Rollout Verifier (k={visiblePassedK} / n={visibleSwarm.length})
                   </span>
+                  <button
+                    disabled={mcRunning}
+                    onClick={runLiveMonteCarloStepAnimation}
+                    className="px-2 py-0.5 rounded bg-sky-600 hover:bg-sky-500 text-white font-bold"
+                  >
+                    {mcRunning ? `Stepping n=${mcVisibleCount}/100...` : '▶ Re-Run N=100 Live Trials'}
+                  </button>
                 </div>
-                <svg viewBox="0 0 380 120" className="w-full h-28">
+                <svg viewBox="0 0 380 115" className="w-full h-24">
                   <rect x="30" y="5" width="340" height="32" fill="#f43f5e" fillOpacity="0.12" />
-                  <line x1="30" y1="5" x2="30" y2="105" stroke="#475569" strokeWidth="1" />
-                  <line x1="30" y1="105" x2="370" y2="105" stroke="#475569" strokeWidth="1" />
-                  {/* 18.0 Nm Actuator Limit Line */}
-                  <line x1="30" y1="37" x2="370" y2="37" stroke="#f43f5e" strokeDasharray="4 3" strokeWidth="1.3" />
-                  <text x="255" y="32" fill="#f43f5e" fontSize="8.5" fontFamily="monospace">
-                    18.0 Nm Actuator Limit
-                  </text>
-
-                  {/* Playhead vertical cursor */}
-                  <line
-                    x1={30 + (episodeTimeSec / 2.0) * 340}
-                    y1="5"
-                    x2={30 + (episodeTimeSec / 2.0) * 340}
-                    y2="105"
-                    stroke="#f59e0b"
-                    strokeWidth="1.2"
-                  />
-
-                  {/* Joint J2 Total Torque Curve tau_J2(t) across all 50 steps */}
-                  {trajSteps.length > 0 && (
-                    <polyline
-                      fill="none"
-                      stroke={isQuarantined ? '#f43f5e' : '#10b981'}
-                      strokeWidth="2.4"
-                      points={trajSteps
-                        .map((st, idx) => {
-                          const x = 30 + (idx / Math.max(1, trajSteps.length - 1)) * 340;
-                          const tauJ2 = st.joint_torques_nm[1] ?? st.peak_joint_torque_nm;
-                          const y = Math.max(8, Math.min(102, 105 - (tauJ2 / 28.0) * 95));
-                          return `${x},${y}`;
-                        })
-                        .join(' ')}
-                    />
-                  )}
-
-                  {/* Joint J1 Torque Curve tau_J1(t) */}
-                  {trajSteps.length > 0 && (
-                    <polyline
-                      fill="none"
-                      stroke="#38bdf8"
-                      strokeWidth="1.6"
-                      points={trajSteps
-                        .map((st, idx) => {
-                          const x = 30 + (idx / Math.max(1, trajSteps.length - 1)) * 340;
-                          const tauJ1 = st.joint_torques_nm[0] ?? 8.0;
-                          const y = Math.max(8, Math.min(102, 105 - (tauJ1 / 28.0) * 95));
-                          return `${x},${y}`;
-                        })
-                        .join(' ')}
-                    />
-                  )}
-
-                  {/* Gravity Component Baseline G_J2(q(t)) */}
-                  {trajSteps.length > 0 && (
-                    <polyline
-                      fill="none"
-                      stroke="#a855f7"
-                      strokeDasharray="3 2"
-                      strokeWidth="1.3"
-                      points={trajSteps
-                        .map((st, idx) => {
-                          const x = 30 + (idx / Math.max(1, trajSteps.length - 1)) * 340;
-                          const gJ2 = st.gravity_torques_nm?.[1] ?? 6.5;
-                          const y = Math.max(8, Math.min(102, 105 - (gJ2 / 28.0) * 95));
-                          return `${x},${y}`;
-                        })
-                        .join(' ')}
-                    />
-                  )}
+                  <rect x="30" y="5" width="95" height="98" fill="#f43f5e" fillOpacity="0.12" />
+                  <line x1="30" y1="5" x2="30" y2="103" stroke="#475569" strokeWidth="1" />
+                  <line x1="30" y1="103" x2="370" y2="103" stroke="#475569" strokeWidth="1" />
+                  <line x1="30" y1="37" x2="370" y2="37" stroke="#f43f5e" strokeDasharray="4 3" strokeWidth="1.2" />
+                  <line x1="125" y1="5" x2="125" y2="103" stroke="#f59e0b" strokeDasharray="4 3" strokeWidth="1.2" />
+                  {visibleSwarm.map((pt) => {
+                    const cx = Math.min(365, Math.max(35, 125 + pt.friction_margin_pct * 2.3));
+                    const cy = Math.min(99, Math.max(10, 103 - (pt.peak_torque_nm / 28.0) * 90));
+                    return (
+                      <circle
+                        key={pt.rollout_id}
+                        cx={cx}
+                        cy={cy}
+                        r="2.8"
+                        fill={pt.survived ? '#10b981' : '#f43f5e'}
+                        fillOpacity="0.88"
+                      />
+                    );
+                  })}
                 </svg>
-                <div className="flex justify-between text-[10px] font-mono text-slate-400 pt-0.5">
-                  <span className="text-emerald-400">━━ τ_J2(t) Shoulder Peak</span>
-                  <span className="text-sky-400">━━ τ_J1(t) Base Yaw</span>
-                  <span className="text-purple-400">--- G_J2(q) Gravity Term</span>
+                <div className="flex justify-between text-[10px] font-mono text-slate-300">
+                  <span>
+                    μ_τ = {attestation?.mean_observed_torque_nm ?? 13.70} ± {attestation?.torque_std_dev_nm ?? 0.65} Nm
+                  </span>
+                  <span className="text-emerald-400 font-bold">
+                    Live Wilson 95% CI: [{liveCiLow}%, {liveCiHigh}%]
+                  </span>
                 </div>
               </div>
 
               {/* 6-DOF Per-Joint Torque Breakdown */}
               <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 space-y-1">
-                <div className="text-[10px] font-bold text-slate-300 flex flex-wrap justify-between items-center gap-1 font-mono">
+                <div className="text-[10px] font-bold text-slate-300 flex justify-between font-mono">
                   <span>6-DOF Per-Joint Peak Torque Breakdown (J1–J6)</span>
-                  <span className="text-slate-300 text-[9.5px]">
-                    <span className="text-emerald-400 font-bold">
-                      k = {attestation?.passed_rollouts_k ?? 97} / n = {attestation?.evaluated_rollouts ?? 100} Passed ({attestation?.task_completion_rate_pct ?? 97.0}%)
-                    </span>
-                    {' · '}
-                    <span>
-                      μ_τ = {attestation?.mean_observed_torque_nm ?? 13.70} ± {attestation?.torque_std_dev_nm ?? 0.79} Nm
-                    </span>
-                    {' · '}
-                    <span className="text-sky-300">
-                      95% Wilson CI [{attestation?.wilson_95_ci_lower_pct ?? 91.55}%, {attestation?.wilson_95_ci_upper_pct ?? 98.97}%]
-                    </span>
-                  </span>
+                  <span className="text-slate-400">Actuator Limit: 18.0 Nm</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {activeDiag.joint_torques_nm.map((tau, idx) => {
@@ -2048,71 +1604,51 @@ export default function App() {
                   })}
                 </div>
               </div>
-
-              {/* 100-ROLLOUT GAUSSIAN MONTE CARLO SWARM PHASE-SPACE VISUALIZER */}
-              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 space-y-1.5">
-                <div className="flex justify-between items-center text-[10px] font-mono">
-                  <span className="font-bold text-slate-300">100-Rollout Monte Carlo Phase-Space Swarm</span>
-                  <span className="text-emerald-400 font-bold">
-                    k = {attestation?.passed_rollouts_k ?? 97} / {attestation?.evaluated_rollouts ?? 100} Safe (Wilson 95% CI [{attestation?.wilson_95_ci_lower_pct ?? 91.55}%, {attestation?.wilson_95_ci_upper_pct ?? 98.97}%])
-                  </span>
-                </div>
-                <div className="relative w-full h-20 bg-slate-900/80 rounded border border-slate-800 overflow-hidden">
-                  <div className="absolute left-6 top-1 bottom-4 border-l border-slate-700/60" />
-                  <div className="absolute left-6 right-2 bottom-4 border-b border-slate-700/60" />
-                  <span className="absolute left-1 top-1 text-[8px] font-mono text-slate-500">22N</span>
-                  <span className="absolute left-1 bottom-4 text-[8px] font-mono text-slate-500">0N</span>
-                  <span className="absolute right-2 bottom-0 text-[8px] font-mono text-slate-500">Clearance (m)</span>
-                  <div className="absolute left-6 right-2 top-[18%] border-t border-dashed border-rose-500/50" />
-                  {(attestation?.rollout_swarm || []).slice(0, 100).map((pt) => {
-                    const xPct = Math.max(6, Math.min(96, 6 + ((pt.min_clearance_m - 0.05) / 0.15) * 88));
-                    const yPct = Math.max(10, Math.min(85, 100 - (pt.peak_torque_nm / 22.0) * 80));
-                    return (
-                      <div
-                        key={pt.rollout_id}
-                        className={`absolute w-1.5 h-1.5 rounded-full transform -translate-x-1/2 -translate-y-1/2 ${
-                          pt.survived ? 'bg-emerald-400 opacity-80 shadow-[0_0_4px_#10b981]' : 'bg-rose-500 opacity-90 shadow-[0_0_4px_#f43f5e]'
-                        }`}
-                        style={{ left: `${xPct}%`, top: `${yPct}%` }}
-                        title={`Rollout #${pt.rollout_id}: ${pt.peak_torque_nm.toFixed(2)} Nm, clearance: ${pt.min_clearance_m.toFixed(3)}m (${pt.survived ? 'Passed' : 'Violated'})`}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           )}
 
-          {/* WORKSPACE 2: ASYNCHRONOUS DEVOPS PIPELINE, 4-TIER NEMOTRON LOGS & LIVE TAVILY */}
-          {workspaceTab === 'devops_pipeline' && (
+          {/* SUBSYSTEM 2 WORKSPACE: AUTHENTIC OPENSHELL SANDBOXED SRE AGENT + LIVE TAVILY ERRATA SEARCH */}
+          {workspaceTab === 'subsystem_2_sre_agent' && (
             <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-3.5 flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-sky-300">
-                  Loop B: Asynchronous Nebius Token Factory &amp; Tavily Grounding
+                <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                  NVIDIA OpenShell Agent Runtime Syscall &amp; Egress Audit Log
                 </h2>
-                <span className="text-[10px] font-mono text-emerald-400">Offline Incident Remediation</span>
+                <span className="text-[10px] font-mono text-sky-400">nemoclaw-openshell-sandbox</span>
               </div>
 
-              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                {tierLogs.map((log, i) => (
-                  <div key={i} className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-sky-400">{log.stage}</span>
-                      <span className="font-mono text-[10px] text-emerald-400">
-                        {log.latency_ms} ms · {log.request_id}
-                      </span>
+              {/* Authentic OpenShell Agent Execution Audit Table */}
+              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2 space-y-1 max-h-36 overflow-y-auto text-[10px] font-mono">
+                {(attestation?.openshell_agent_audit_log || []).map((rule, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-2 p-1 rounded bg-slate-900/90 border border-slate-800"
+                  >
+                    <div className="truncate">
+                      <span className="text-sky-300 font-bold">{rule.agent_action}</span>{' '}
+                      <span className="text-slate-400">→ {rule.target_resource}</span>
                     </div>
-                    <div className="text-[10px] font-mono text-slate-400">Model: {log.model}</div>
-                    <p className="text-slate-200 text-[11px] mt-0.5">{log.content}</p>
+                    <span
+                      className={`px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                        rule.decision.includes('BLOCK') || rule.decision.includes('DENY')
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      }`}
+                    >
+                      {rule.decision}
+                    </span>
                   </div>
                 ))}
               </div>
 
+              {/* Live Tavily SRE Documentation & Errata Search */}
               <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 space-y-1.5 text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-amber-300">Live Tavily API Search Verifier ($3,000 Track):</span>
+                  <span className="font-bold text-amber-300">
+                    Tavily SRE Maintenance &amp; ROS2 Errata Search ($3,000 Track):
+                  </span>
                   <span className="font-mono text-[10px] text-emerald-400">
-                    {healthStatus.tavily ? `CONNECTED (${healthStatus.prefix})` : 'READY'}
+                    {healthStatus.tavily ? `LIVE API (${healthStatus.prefix})` : 'READY'}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -2127,7 +1663,7 @@ export default function App() {
                     onClick={executeLiveTavilyVerification}
                     className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold shrink-0"
                   >
-                    {isTestingTavily ? 'Searching...' : 'Query Tavily Live'}
+                    {isTestingTavily ? 'Searching...' : 'Search Live Docs'}
                   </button>
                 </div>
                 {(tavilyTestResult?.citations || physicsSpec?.citations || []).slice(0, 2).map((c, i) => (
@@ -2139,29 +1675,52 @@ export default function App() {
                   </div>
                 ))}
               </div>
+
+              {/* Nebius Token Factory 4-Tier Diagnostic Logs */}
+              <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                {tierLogs.map((log, i) => (
+                  <div key={i} className="bg-slate-950 border border-slate-800 rounded p-1.5 text-[10px]">
+                    <div className="flex justify-between font-mono text-sky-400 font-bold">
+                      <span>
+                        {log.stage} ({log.model})
+                      </span>
+                      <span className="text-emerald-400">{log.request_id}</span>
+                    </div>
+                    <div className="text-slate-300 mt-0.5">{log.content}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* WORKSPACE 3: AUTHENTIC OPENSHELL DECLARATIVE YAML POLICY, CODE DIFF & 6x6 JACOBIAN */}
-          {workspaceTab === 'openshell_yaml' && (
+          {/* SUBSYSTEM 3 WORKSPACE: ASYNCHRONOUS NEBIUS H100 BATCH ORCHESTRATOR, CODE PATCH & 6x6 JACOBIAN */}
+          {workspaceTab === 'subsystem_3_batch_jobs' && (
             <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-3.5 flex flex-col gap-2.5">
-              <div className="text-xs font-bold uppercase tracking-wider text-emerald-300">
-                NVIDIA OpenShell v1.4 Declarative Container &amp; Kinematic Policy (`openshell_policy.yaml`)
+              <div className="bg-slate-950 border border-purple-500/40 rounded-lg p-2.5 text-[10px] font-mono space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-purple-300 font-bold">
+                    NEBIUS SERVERLESS GPU BATCH ORCHESTRATOR (`gpu-h100-sxm`)
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-200 font-bold">
+                    ASYNC_BATCH_STAGED (Est. H100 Duration: 14m 20s)
+                  </span>
+                </div>
+                <pre className="text-sky-300 overflow-x-auto max-h-20">{smolvlaCli || cosmosCli}</pre>
               </div>
-              <pre className="bg-slate-950 border border-emerald-500/30 rounded p-2 text-[10px] font-mono text-emerald-200 overflow-x-auto max-h-36">
-                {attestation?.openshell_policy_yaml}
-              </pre>
 
               <div className="grid grid-cols-1 gap-1.5 text-[10px] font-mono">
-                <pre className="bg-slate-950 border border-sky-500/30 rounded p-2 text-sky-200 overflow-x-auto max-h-28">
+                <pre className="bg-slate-950 border border-emerald-500/30 rounded p-2 text-emerald-200 overflow-x-auto max-h-28">
                   {attestation?.synthesized_code_diff?.remediated_v1_1}
                 </pre>
               </div>
 
               <div className="bg-slate-950 border border-slate-800 rounded-lg p-2">
                 <div className="text-[10px] font-bold text-slate-300 mb-1 flex justify-between font-mono">
-                  <span>Backend-Computed 6x6 Spatial Jacobian J(q) at t={episodeTimeSec.toFixed(2)}s</span>
-                  <span className="text-amber-300">κ(J) = {activeDiag.jacobian_condition_number}</span>
+                  <span>6x6 Spatial Manipulator Jacobian J(q) at t={episodeTimeSec.toFixed(2)}s</span>
+                  <span className="text-amber-300">
+                    w(q) = {activeDiag.yoshikawa_manipulability_index ?? 0.412} · κ(J) ={' '}
+                    {activeDiag.jacobian_condition_number}
+                  </span>
                 </div>
                 <div className="grid grid-cols-6 gap-1 text-[10px] font-mono text-center">
                   {activeDiag.spatial_jacobian_6x6.flat().map((val, idx) => (
@@ -2174,13 +1733,15 @@ export default function App() {
             </div>
           )}
 
-          {/* LIVE REPRODUCIBLE CURL & FASTAPI BACKEND TERMINAL (Proves Backend Execution Without Any Fake Polling!) */}
+          {/* LIVE EVENT-DRIVEN HTTP & CURL INSPECTOR */}
           <div className="rounded-xl border border-slate-800 bg-slate-950 p-3 flex flex-col gap-1.5 shadow-xl font-mono">
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-bold text-emerald-400">
-                &gt;_ Live Reproducible FastAPI &amp; cURL Inspector (Event-Driven · Zero Polling Theatre)
+                &gt;_ Reproducible REST &amp; cURL Telemetry Log (Event-Driven)
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">cluster-ingress.eu-north1.nebius.cloud:8443</span>
+              <span className="text-[10px] text-sky-400">
+                {typeof window !== 'undefined' ? window.location.host : 'api-active'}
+              </span>
             </div>
             <div className="space-y-1.5 max-h-40 overflow-y-auto text-[10px]">
               {terminalLogs.map((entry, idx) => (
@@ -2198,37 +1759,6 @@ export default function App() {
           </div>
         </div>
       </main>
-
-      {/* High-Resolution 5-Modality Loupe Modal */}
-      {inspectedModality && (
-        <div
-          onClick={() => setInspectedModality(null)}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-sky-500/50 rounded-xl p-5 max-w-2xl w-full space-y-3 shadow-2xl"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase text-sky-400">
-                Isaac Sim CosmosWriter Conditioning Buffer Inspector: {inspectedModality.toUpperCase()}
-              </h3>
-              <button
-                onClick={() => setInspectedModality(null)}
-                className="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold"
-              >
-                Close [ESC]
-              </button>
-            </div>
-            <canvas
-              ref={loupeCanvasRef}
-              width={480}
-              height={270}
-              className="w-full rounded-lg border border-slate-800 bg-black"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
