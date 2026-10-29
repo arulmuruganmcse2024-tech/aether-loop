@@ -59,6 +59,10 @@ def test_openshell_newton_euler_physics_verifier_computes_real_dynamics():
     assert receipt.task_completion_rate_pct >= 94.0
     assert receipt.attestation_status == "VERIFIED_SAFE_FOR_EDGE_DEPLOYMENT"
     assert len(receipt.per_joint_peak_torque_nm) == 6
+    assert len(receipt.rollout_swarm) == 100
+    assert len(receipt.spatial_jacobian_6x6) == 6
+    assert receipt.wilson_95_ci_lower_pct >= 94.0
+    assert "baseline_v1_0" in receipt.synthesized_code_diff
 
 
 def test_4_tier_router_and_two_wait_poller_end_to_end():
