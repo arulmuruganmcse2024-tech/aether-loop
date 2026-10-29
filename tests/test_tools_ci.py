@@ -141,3 +141,36 @@ def test_custom_hazard_tavily_snippet_physics_synthesis():
     assert spec.optical_specular_ior == 1.38
     assert spec.payload_mass_kg == 2.4
 
+
+def test_bootstrap_kinematic_step_cosmos_modalities_and_signature_verifier():
+    boot = client.get("/api/v1/session/bootstrap?anomaly_id=skydrol_spill")
+    assert boot.status_code == 200
+    b_data = boot.json()
+    assert "session_nonce" in b_data
+    assert len(b_data["vla_trajectory"]["policy_v1_1_steps"]) == 50
+
+    step = client.post(
+        "/api/v1/kinematics/step",
+        json={"timestamp_sec": 1.42, "payload_mass_kg": 1.4, "kinetic_friction_mu_k": 0.08, "max_safe_velocity": 0.22},
+    )
+    assert step.status_code == 200
+    assert len(step.json()["joint_torques_nm"]) == 6
+
+    mods = client.post(
+        "/api/v1/cosmos/recompute-modalities",
+        json={"anomaly_id": "skydrol_spill", "canny_low": 40, "canny_high": 125, "optical_specular_ior": 1.478, "kinetic_friction_mu_k": 0.08},
+    )
+    assert mods.status_code == 200
+    assert mods.json()["edge_pixel_density_pct"] > 0.0
+
+    sig_check = client.post(
+        "/api/v1/openshell/verify-signature",
+        json={
+            "canonical_payload_json": b_data["attestation"]["canonical_payload_json"],
+            "expected_signature": b_data["attestation"]["sha256_signature"],
+        },
+    )
+    assert sig_check.status_code == 200
+    assert sig_check.json()["verified"] is True
+
+
