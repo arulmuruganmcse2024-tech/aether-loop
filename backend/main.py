@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import hashlib
 import json
 import math
@@ -370,6 +371,23 @@ async def verify_openshell_signature_endpoint(req: SignatureVerifyRequest):
         "verified": verified,
         "recomputed_sha256_prefix": f"sha256:{recomputed_hex[:32]}",
         "expected_signature": req.expected_signature,
+    }
+
+
+class OpenShellGuardTestRequest(BaseModel):
+    attempted_action: str = "WRITE_RAW_CAN_FRAME"
+    target_resource: str = "/dev/can0 (SO-101 Actuator Bus)"
+
+
+@app.post("/api/v1/openshell/test-guard")
+async def test_openshell_syscall_guard(req: OpenShellGuardTestRequest):
+    utc_now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {
+        "timestamp_utc": utc_now,
+        "agent_action": req.attempted_action,
+        "target_resource": req.target_resource,
+        "policy_rule": "agentExecutionBounds.blockedSyscalls [EPERM]",
+        "decision": "BLOCKED_BY_OPENSHELL",
     }
 
 

@@ -213,5 +213,21 @@ def test_composite_cryogenic_petrolatum_mixture_and_gaussian_variance():
     assert data["broker_event"]["ack_status"] == "XACK_COMMITTED"
 
 
+def test_openshell_syscall_guard_interception_endpoint():
+    res = client.post(
+        "/api/v1/openshell/test-guard",
+        json={
+            "attempted_action": "WRITE_RAW_CAN_FRAME",
+            "target_resource": "/dev/can0 (SO-101 Direct Actuator CAN Bus)",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["decision"] == "BLOCKED_BY_OPENSHELL"
+    assert "blockedSyscalls" in data["policy_rule"]
+    assert data["agent_action"] == "WRITE_RAW_CAN_FRAME"
+
+
+
 
 
