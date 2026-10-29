@@ -124,3 +124,20 @@ def test_runtime_credentials_and_tavily_test_endpoints():
     assert len(tav_res.json()["citations"]) > 0
 
     client.post("/api/v1/config/keys", json={"nebius_api_key": "", "tavily_api_key": ""})
+
+
+def test_custom_hazard_tavily_snippet_physics_synthesis():
+    from backend.router_nemotron import synthesize_physics_from_tavily_evidence, FALLBACK_PHYSICS_SPECS
+
+    base = FALLBACK_PHYSICS_SPECS["skydrol_spill"]
+    spec = synthesize_physics_from_tavily_evidence(
+        anomaly_id="skydrol_spill",
+        description="PTFE Teflon grease on 2.4kg steel valve",
+        citations=[{"title": "PTFE Tribology", "url": "https://example.com", "snippet": "kinetic friction coefficient 0.05 and refractive index 1.38"}],
+        base_spec=base,
+        request_id="test-req-123",
+    )
+    assert spec.kinetic_friction_mu_k == 0.05
+    assert spec.optical_specular_ior == 1.38
+    assert spec.payload_mass_kg == 2.4
+
