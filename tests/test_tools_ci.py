@@ -148,6 +148,8 @@ def test_bootstrap_kinematic_step_cosmos_modalities_and_signature_verifier():
     b_data = boot.json()
     assert "session_nonce" in b_data
     assert len(b_data["vla_trajectory"]["policy_v1_1_steps"]) == 50
+    assert "openshell_policy_yaml" in b_data["attestation"]
+    assert "sha256_manifest_digest" in b_data["attestation"]
 
     step = client.post(
         "/api/v1/kinematics/step",
@@ -167,7 +169,7 @@ def test_bootstrap_kinematic_step_cosmos_modalities_and_signature_verifier():
         "/api/v1/openshell/verify-signature",
         json={
             "canonical_payload_json": b_data["attestation"]["canonical_payload_json"],
-            "expected_signature": b_data["attestation"]["sha256_signature"],
+            "expected_signature": b_data["attestation"]["sha256_manifest_digest"],
         },
     )
     assert sig_check.status_code == 200

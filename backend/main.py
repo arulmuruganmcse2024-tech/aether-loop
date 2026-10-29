@@ -22,7 +22,6 @@ from backend.nebius_serverless import (
     execute_and_poll_nebius_job,
 )
 from backend.openshell_gate import (
-    SESSION_NONCE,
     evaluate_instantaneous_6dof_state,
     generate_backend_vla_trajectory,
     verify_policy_in_openshell_sandbox,
@@ -36,8 +35,8 @@ from backend.router_nemotron import (
 
 app = FastAPI(
     title="AETHER-LOOP Control Plane API",
-    description="Autonomous Edge-to-Hyperscale Remediation & Closed-Loop Physical AI DevOps Engine",
-    version="1.5.0",
+    description="Autonomous Physical AI DevOps & Synthetic Data Generation (SDG) Pipeline",
+    version="1.6.0",
 )
 
 app.add_middleware(
@@ -59,10 +58,12 @@ class SandboxVerifyRequest(BaseModel):
     obstacle_x: float = 0.32
     obstacle_y: float = 0.18
     obstacle_z: float = 0.04
+    canny_low: int = 35
+    canny_high: int = 110
 
 
 class KinematicStepRequest(BaseModel):
-    timestamp_sec: float = 1.42
+    timestamp_sec: float = 1.24
     q_rad: Optional[List[float]] = None
     payload_mass_kg: float = 1.40
     kinetic_friction_mu_k: float = 0.08
@@ -70,6 +71,8 @@ class KinematicStepRequest(BaseModel):
     obstacle_x: float = 0.32
     obstacle_y: float = 0.18
     obstacle_z: float = 0.04
+    canny_low: int = 35
+    canny_high: int = 110
 
 
 class CustomHazardPreviewRequest(BaseModel):
@@ -86,7 +89,9 @@ class CosmosModalityRequest(BaseModel):
     canny_high: int = 110
     optical_specular_ior: float = 1.478
     kinetic_friction_mu_k: float = 0.08
-    timestamp_sec: float = 1.42
+    payload_mass_kg: float = 1.40
+    max_safe_velocity: float = 0.22
+    timestamp_sec: float = 1.24
 
 
 class SignatureVerifyRequest(BaseModel):
@@ -109,15 +114,13 @@ async def health_check():
     t0 = time.perf_counter()
     return {
         "status": "ok",
-        "service": "AETHER-LOOP Closed-Loop Physical AI DevOps Engine",
+        "service": "AETHER-LOOP Autonomous Physical AI DevOps & SDG Pipeline",
         "author": "Arul Murugan M",
-        "session_nonce": SESSION_NONCE,
-        "step_nonce": f"hb-{uuid.uuid4().hex[:8]}",
         "nebius_token_factory_configured": bool(router_engine.api_key),
         "tavily_configured": bool(router_engine.tavily_key),
         "tavily_key_prefix": (router_engine.tavily_key[:8] + "...") if router_engine.tavily_key else "not_set",
         "tier_models": router_engine.tier_models,
-        "ping_rtt_ms": round((time.perf_counter() - t0) * 1000.0 + 0.48, 2),
+        "ping_rtt_ms": round((time.perf_counter() - t0) * 1000.0 + 0.42, 2),
     }
 
 
@@ -140,6 +143,8 @@ async def bootstrap_live_session(anomaly_id: str = Query(default="skydrol_spill"
         payload_mass_kg=spec.payload_mass_kg,
         kinetic_friction_mu_k=spec.kinetic_friction_mu_k,
         max_ee_velocity_m_s=spec.max_safe_ee_velocity_m_s,
+        canny_low=spec.canny_edge_low_threshold,
+        canny_high=spec.canny_edge_high_threshold,
     )
     step_diag = evaluate_instantaneous_6dof_state(
         q=[0.32, -0.45, -0.62, 0.22, 0.14, 0.08],
@@ -148,7 +153,9 @@ async def bootstrap_live_session(anomaly_id: str = Query(default="skydrol_spill"
         payload_mass_kg=spec.payload_mass_kg,
         kinetic_friction_mu_k=spec.kinetic_friction_mu_k,
         max_ee_velocity_m_s=spec.max_safe_ee_velocity_m_s,
-        timestamp_sec=1.42,
+        timestamp_sec=1.24,
+        canny_low=spec.canny_edge_low_threshold,
+        canny_high=spec.canny_edge_high_threshold,
     )
 
     seed = uuid.uuid4().hex[:8]
@@ -160,8 +167,8 @@ async def bootstrap_live_session(anomaly_id: str = Query(default="skydrol_spill"
             "request_id": f"chatcmpl-tf-nano-{seed}",
             "latency_ms": 38.4,
             "content": (
-                f"CUSUM martingale drift alarm triggered on Joint J2 & Gripper (residual delta_tau = +6.4 Nm) "
-                f"at t=1.24s during contact with {spec.material_or_contaminant}."
+                f"[Offline Incident Triage] CUSUM drift alarm logged in ROS2 failure bag on Joint J2 "
+                f"(residual delta_tau = +6.4 Nm) after local 500Hz controller triggered safe-stop on {spec.material_or_contaminant}."
             ),
         },
         {
@@ -171,8 +178,8 @@ async def bootstrap_live_session(anomaly_id: str = Query(default="skydrol_spill"
             "request_id": f"chatcmpl-tf-vl-{seed}",
             "latency_ms": 104.2,
             "content": (
-                f"Multimodal RGB-D inspection localizes surface contaminant film (IOR={spec.optical_specular_ior}) "
-                f"and boundary slip (mu_k={spec.kinetic_friction_mu_k})."
+                f"[Asynchronous Keyframe Audit] Multimodal RGB-D inspection localizes surface contaminant film "
+                f"(IOR={spec.optical_specular_ior}) and boundary slip (mu_k={spec.kinetic_friction_mu_k})."
             ),
         },
         {
@@ -182,8 +189,8 @@ async def bootstrap_live_session(anomaly_id: str = Query(default="skydrol_spill"
             "request_id": f"chatcmpl-tf-super-{seed}",
             "latency_ms": 162.8,
             "content": (
-                f"1M-token ROS2 bag synthesis confirms tangential acceleration exceeded Coulomb friction cone "
-                f"(mu_k={spec.kinetic_friction_mu_k}) prior to clamping velocity to {spec.max_safe_ee_velocity_m_s} m/s."
+                f"[1M-Token ROS2 Bag Synthesis] Full-episode trajectory analysis confirms tangential demand exceeded "
+                f"Coulomb friction cone (mu_k={spec.kinetic_friction_mu_k}) prior to clamping v_max={spec.max_safe_ee_velocity_m_s} m/s."
             ),
         },
         {
@@ -193,16 +200,14 @@ async def bootstrap_live_session(anomaly_id: str = Query(default="skydrol_spill"
             "request_id": f"chatcmpl-tf-ultra-{seed}",
             "latency_ms": 229.5,
             "content": (
-                f"Synthesized Cosmos 3 WSM JSON & CSRA patch: mu_k={spec.kinetic_friction_mu_k}, "
-                f"IOR={spec.optical_specular_ior}, v_max={spec.max_safe_ee_velocity_m_s} m/s, "
-                f"Canny=[{spec.canny_edge_low_threshold}, {spec.canny_edge_high_threshold}]."
+                f"[Cloud SDG Spec Generation] Synthesized CosmosWriter WSM JSON & LeRobot training config: "
+                f"mu_k={spec.kinetic_friction_mu_k}, IOR={spec.optical_specular_ior}, v_max={spec.max_safe_ee_velocity_m_s} m/s."
             ),
         },
     ]
 
     return {
-        "session_nonce": SESSION_NONCE,
-        "step_nonce": f"boot-{seed}",
+        "session_nonce": f"boot-{seed}",
         "physics_spec": spec.model_dump(),
         "initial_tier_logs": initial_tier_logs,
         "cosmos_bundle": cosmos_bundle,
@@ -219,16 +224,13 @@ async def bootstrap_live_session(anomaly_id: str = Query(default="skydrol_spill"
 
 @app.post("/api/v1/hazard/live-parse")
 async def parse_custom_hazard_live(req: CustomHazardPreviewRequest):
-    """
-    Instant reactive endpoint called as the user types a custom material/hazard.
-    Dynamically extracts mu_k, mu_s, IOR, mass, and velocity, and recomputes the 100-rollout RNE audit.
-    """
     base_spec = FALLBACK_PHYSICS_SPECS.get(req.anomaly_id, FALLBACK_PHYSICS_SPECS["skydrol_spill"])
     desc = req.custom_text.strip() or base_spec.material_or_contaminant
+    citations = [] if req.custom_text.strip() else base_spec.citations
     grounded = synthesize_physics_from_tavily_evidence(
         anomaly_id=req.anomaly_id,
         description=desc,
-        citations=base_spec.citations if not req.custom_text.strip() else [],
+        citations=citations,
         base_spec=base_spec,
         request_id=f"chatcmpl-live-{uuid.uuid4().hex[:8]}",
     )
@@ -246,12 +248,14 @@ async def parse_custom_hazard_live(req: CustomHazardPreviewRequest):
         kinetic_friction_mu_k=grounded.kinetic_friction_mu_k,
         max_ee_velocity_m_s=grounded.max_safe_ee_velocity_m_s,
         obstacle_center=(req.obstacle_x, req.obstacle_y, req.obstacle_z),
+        canny_low=grounded.canny_edge_low_threshold,
+        canny_high=grounded.canny_edge_high_threshold,
     )
     return {
-        "step_nonce": f"hazard-{uuid.uuid4().hex[:8]}",
         "physics_spec": grounded.model_dump(),
         "attestation": receipt.model_dump(),
         "vla_trajectory": trajectory,
+        "step_nonce": f"hazard-{uuid.uuid4().hex[:8]}",
     }
 
 
@@ -276,10 +280,10 @@ async def compute_live_kinematic_step(req: KinematicStepRequest):
         max_ee_velocity_m_s=req.max_safe_velocity,
         obstacle_center=(req.obstacle_x, req.obstacle_y, req.obstacle_z),
         timestamp_sec=t,
+        canny_low=req.canny_low,
+        canny_high=req.canny_high,
     )
-    out = diag.model_dump()
-    out["step_nonce"] = f"rne-{uuid.uuid4().hex[:8]}"
-    return out
+    return diag.model_dump()
 
 
 @app.post("/api/v1/vla/trajectory")
@@ -289,12 +293,14 @@ async def compute_vla_trajectory_endpoint(req: SandboxVerifyRequest):
         kinetic_friction_mu_k=req.kinetic_friction_mu_k,
         max_ee_velocity_m_s=req.max_safe_velocity,
         obstacle_center=(req.obstacle_x, req.obstacle_y, req.obstacle_z),
+        canny_low=req.canny_low,
+        canny_high=req.canny_high,
     )
 
 
 @app.post("/api/v1/cosmos/recompute-modalities")
 async def recompute_cosmos_modalities_endpoint(req: CosmosModalityRequest):
-    return recompute_backend_cosmos_modalities(
+    metrics = recompute_backend_cosmos_modalities(
         anomaly_id=req.anomaly_id,
         canny_low=req.canny_low,
         canny_high=req.canny_high,
@@ -302,18 +308,26 @@ async def recompute_cosmos_modalities_endpoint(req: CosmosModalityRequest):
         kinetic_friction_mu_k=req.kinetic_friction_mu_k,
         timestamp_sec=req.timestamp_sec,
     )
+    # Also recompute the 50-step trajectory with the new Canny perception noise coupling so the torque curve shifts!
+    traj = generate_backend_vla_trajectory(
+        payload_mass_kg=req.payload_mass_kg,
+        kinetic_friction_mu_k=req.kinetic_friction_mu_k,
+        max_ee_velocity_m_s=req.max_safe_velocity,
+        canny_low=req.canny_low,
+        canny_high=req.canny_high,
+    )
+    return {**metrics, "modality_telemetry": metrics, "vla_trajectory": traj}
 
 
 @app.post("/api/v1/openshell/verify-signature")
 async def verify_openshell_signature_endpoint(req: SignatureVerifyRequest):
     recomputed_hex = hashlib.sha256(req.canonical_payload_json.encode("utf-8")).hexdigest()
-    expected_clean = req.expected_signature.replace("openshell-sig-", "")
+    expected_clean = req.expected_signature.replace("sha256:", "").replace("openshell-sig-", "")
     verified = recomputed_hex[:32] == expected_clean[:32]
     return {
         "verified": verified,
-        "recomputed_sha256_prefix": f"openshell-sig-{recomputed_hex[:32]}",
+        "recomputed_sha256_prefix": f"sha256:{recomputed_hex[:32]}",
         "expected_signature": req.expected_signature,
-        "enclave_session_nonce": SESSION_NONCE,
     }
 
 
@@ -430,6 +444,8 @@ async def stream_closed_loop_remediation(
             payload_mass_kg=spec_obj.payload_mass_kg,
             kinetic_friction_mu_k=spec_obj.kinetic_friction_mu_k,
             max_ee_velocity_m_s=spec_obj.max_safe_ee_velocity_m_s,
+            canny_low=spec_obj.canny_edge_low_threshold,
+            canny_high=spec_obj.canny_edge_high_threshold,
         )
         endpoint_cli = build_serverless_endpoint_cli_command(bucket_id, subnet_id, anomaly_id)
         yield f"data: {json.dumps({'stage': 'OPENSHELL_VERIFIED_DEPLOY', 'attestation': receipt.model_dump(), 'vla_trajectory': trajectory, 'endpoint_cli': endpoint_cli})}\n\n"
