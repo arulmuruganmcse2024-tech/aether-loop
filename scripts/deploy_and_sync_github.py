@@ -123,3 +123,4 @@ if __name__ == "__main__":
     deploy_gh_pages(root)
     gh_token = get_git_token()
     update_github_repo_metadata(gh_token)
+

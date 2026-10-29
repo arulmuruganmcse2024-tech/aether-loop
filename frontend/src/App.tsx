@@ -40,7 +40,7 @@ interface RolloutPoint {
   min_clearance_m: number;
   friction_margin_pct: number;
   ee_lateral_accel_m_s2: number;
-  survived: bool;
+  survived: boolean;
 }
 
 interface KinematicStepDiag {
