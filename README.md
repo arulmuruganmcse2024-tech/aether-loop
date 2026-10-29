@@ -6,6 +6,7 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Node 20](https://img.shields.io/badge/node-20-green.svg)](https://nodejs.org/)
 
+**Live Interactive Demo (24/7 GitHub Pages):** [https://arulmuruganmcse2024-tech.github.io/aether-loop/](https://arulmuruganmcse2024-tech.github.io/aether-loop/)  
 **License:** MIT  
 
 ---
