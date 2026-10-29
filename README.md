@@ -1,10 +1,12 @@
 # AETHER-LOOP
 ### Decoupled 3-Subsystem Physical AI & Autonomous Agentic SRE Platform
 
-**Author & Principal Architect:** Arul Murugan M  
-**License:** Apache 2.0  
-**Competition Target:** Nebius x NVIDIA Global AI Hackathon ($20,000 Grand Prize & $3,000 Best Use of Tavily)  
-**Live Production Ingress:** `https://cluster-ingress.eu-north1.nebius.cloud:8443`  
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/arulmuruganmcse2024-tech/aether-loop/actions/workflows/ci.yml/badge.svg)](https://github.com/arulmuruganmcse2024-tech/aether-loop/actions/workflows/ci.yml)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Node 20](https://img.shields.io/badge/node-20-green.svg)](https://nodejs.org/)
+
+**License:** MIT  
 
 ---
 
@@ -34,7 +36,7 @@ Deploying Vision-Language-Action (VLA) models (such as LeRobot SmolVLA) onto art
 |  [SUBSYSTEM 2: SANDBOXED OPENSHELL SRE AGENT & LIVE TAVILY GROUNDING] (Computer 2 & 1 Orchestrator)    |
 |      ├── NVIDIA OpenShell / NemoClaw Sandbox: Syscall Guard Interception (/dev/can0 blocked with EPERM) |
 |      ├── Egress Filtering: Whitelisted to api.tokenfactory.nebius.com & api.tavily.com                  |
-|      ├── Live Tavily Tribology & Optics Search ($3,000 Prize Track): Live TDS/MSDS physical grounding   |
+|      ├── Live Tavily Tribology & Optics Search: Live TDS/MSDS physical grounding                        |
 |      └── Nebius Token Factory 4-Tier Cognitive Router: Nemotron 3 Nano/Super/Ultra (Cost: $0.0024/run)  |
 |                                       │                                                                 |
 |         [Grounded World Scenario Map (WSM) Specification Synthesized]                                   |
@@ -110,9 +112,33 @@ $$CI_{95\%} = \frac{\hat{p} + \frac{z^2}{2n} \pm z\sqrt{\frac{\hat{p}(1-\hat{p})
 
 ---
 
-## 3. Mandatory Sponsor Integrations & Execution Bounds
+## 3. Physics & Monte Carlo Benchmark Results
 
-### 3.1 Nebius Token Factory 4-Tier Cognitive Routing
+To verify computational determinism and real-time execution guarantees across the SO-101 manipulator's operational envelope, `scripts/benchmark_mechanics.py` runs an automated validation sweep across all three anomalous contact regimes:
+
+```
+============================================================================================
+AETHER-LOOP | 6-DOF RNE MECHANICS, MOMENTUM OBSERVER & N=100 MONTE CARLO BENCHMARK
+============================================================================================
+Regime ID            | mu_k   | RNE (ms) | Peak Tau (Nm) | w(q)   | k/n Survival | 95% Wilson CI   
+--------------------------------------------------------------------------------------------
+skydrol_spill        | 0.08   | 0.120    | 14.44         | 0.4729 | 97/100 (97.0%) | [91.55%, 98.97%]
+biopharma_glare      | 0.25   | 0.150    | 16.02         | 0.4729 | 100/100 (100.0%) | [96.3%, 100.0%] 
+deformable_garment   | 0.20   | 0.092    | 14.56         | 0.4729 | 100/100 (100.0%) | [96.3%, 100.0%] 
+============================================================================================
+[PASS] All 3 contact regimes verified within 18.0 Nm actuator ceiling and >=92% survival.
+```
+
+- **RNE Evaluation Latency:** Evaluates 6-DOF inverse dynamics in $< 0.15\text{ ms}$, safely within the $500\text{ Hz}$ ($2.0\text{ ms}$) embedded control loop deadline.
+- **Actuator Torque Ceiling:** All peak joint torques remain within the $18.0\text{ Nm}$ hard limit under worst-case Box-Muller dynamic perturbations.
+- **Kinematic Isotropy:** Yoshikawa manipulability $w(q) = 0.4729$ confirms well-conditioned joint trajectories without approaching kinematic singularities.
+- **Binomial Task Survival:** All regimes achieve $\ge 97.0\%$ completion across $N=100$ rollouts, with Wilson score lower bounds exceeding $91.5\%$.
+
+---
+
+## 4. Sponsor Integrations & Execution Bounds
+
+### 4.1 Nebius Token Factory 4-Tier Cognitive Routing
 AETHER-LOOP connects via `AsyncOpenAI` pointed to `https://api.tokenfactory.nebius.com/v1/` to route reasoning tasks across four specialized NVIDIA Nemotron architectures:
 
 | Tier | Model Identifier | Responsibility | SLA | Unit Cost |
@@ -124,7 +150,7 @@ AETHER-LOOP connects via `AsyncOpenAI` pointed to `https://api.tokenfactory.nebi
 
 Total orchestration inference cost averages **\$0.0024 per remediation cycle**, achieving a **26x cost reduction** over monolithic frontier models.
 
-### 3.2 Tavily Search API Real-Time Physical Grounding ($3,000 Prize Track)
+### 4.2 Tavily Search API Real-Time Physical Grounding
 Rather than hallucinating friction coefficients or refractive indices, Subsystem 2 invokes `tavily-python` non-blockingly via `asyncio.to_thread` with strict 500-character snippet truncation:
 - Searches live manufacturer Technical Data Sheets (TDS), Material Safety Data Sheets (MSDS), and tribology literature.
 - Automatically parses and extracts verified physical constants:
@@ -133,26 +159,26 @@ Rather than hallucinating friction coefficients or refractive indices, Subsystem
   - Maximum safe Cartesian velocity limits ($v_{\text{safe}}$).
 - Binds verified citations directly into the WSM simulator parameters.
 
-### 3.3 Nebius Serverless GPU Batch Jobs & Two-Wait Polling Pattern
+### 4.3 Nebius Serverless GPU Batch Jobs & Two-Wait Polling Pattern
 Long-running training and synthesis workloads are staged on Nebius Serverless H100 GPUs (`gpu-h100-sxm`):
 - **Wait 1:** `await operation.wait()` confirms resource allocation in the Nebius control plane.
 - **Wait 2:** Polls `job_svc.get(GetJobRequest(id=job_id))` until `JobStatus.State` transitions to `COMPLETED`.
 - Mounts shared high-performance POSIX S3 storage (`/data`) for dataset and checkpoint streaming.
 - Emits reproducible CLI commands with mandatory flags (`--shm-size 16Gi`, `--disk-size 250Gi`, `--policy.input_features=null`).
 
-### 3.4 NVIDIA OpenShell & NemoClaw Syscall Interception
+### 4.4 NVIDIA OpenShell & NemoClaw Syscall Interception
 All automated SRE agent operations execute inside an isolated OpenShell sandbox:
 - **Syscall Filter:** Attempts by LLM agents to write directly to hardware actuator buses (`/dev/can0`, raw sockets) are intercepted at the kernel boundary and rejected with `EPERM` (`BLOCKED_BY_OPENSHELL`).
-- **Egress Filter:** Restricts agent network traffic strictly to whitelisted endpoints (`api.tokenfactory.nebius.com`, `cluster-ingress.eu-north1.nebius.cloud:8443`, `api.tavily.com`).
+- **Egress Filter:** Restricts agent network traffic strictly to whitelisted endpoints (`api.tokenfactory.nebius.com`, `api.tavily.com`).
 - **Safety Attestation:** Requires peak torque $\tau_{\text{peak}} \le 18.0\text{ Nm}$, swept-sphere clearance $> 0.0\text{ m}$, and task completion $\ge 94.0\%$ across 100 rollouts before signing an attestation receipt.
 
 ---
 
-## 4. Complete REST API Reference
+## 5. Complete REST API Reference
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/v1/health` | Service health, authorship verification, and credential detection |
+| `GET` | `/api/v1/health` | Service health, license verification, and credential detection |
 | `GET` | `/api/v1/session/bootstrap` | Bootstraps 50-step trajectory, attestation receipt, and WSM bundle |
 | `POST` | `/api/v1/kinematics/step` | Computes instantaneous 6-DOF RNE torques, momentum observer residual, and $J(q)$ |
 | `POST` | `/api/v1/vla/trajectory` | Recomputes 50-step trajectory and 100-rollout Monte Carlo swarm |
@@ -167,17 +193,22 @@ All automated SRE agent operations execute inside an isolated OpenShell sandbox:
 
 ---
 
-## 5. Repository File Structure
+## 6. Repository File Structure
 
 ```
 .
-├── LICENSE                      # Apache-2.0 open-source license (Copyright 2026 Arul Murugan M)
+├── LICENSE                      # MIT License (Copyright 2026 Arul Murugan M)
 ├── README.md                    # Technical specification, mathematical formulation & API reference
 ├── .env.example                 # Configuration template for Nebius and Tavily credentials
 ├── requirements.txt             # Python backend dependencies (FastAPI, Uvicorn, OpenAI, Tavily, Pytest)
 ├── docker-compose.yml           # Multi-container orchestration (Backend + Frontend)
 ├── Dockerfile.backend           # Production Python 3.12 container specification
 ├── verify_submission.sh         # Deterministic pre-submission CI test & compliance audit script
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # Automated GitHub Actions CI workflow
+├── scripts/
+│   └── benchmark_mechanics.py   # Standalone 6-DOF RNE & Monte Carlo benchmark
 ├── backend/
 │   ├── __init__.py              # Backend package initialization
 │   ├── router_nemotron.py       # 4-tier Nebius Token Factory router + non-blocking Tavily grounding
@@ -209,22 +240,22 @@ All automated SRE agent operations execute inside an isolated OpenShell sandbox:
 
 ---
 
-## 6. Quickstart & Verification Instructions
+## 7. Quickstart & Verification Instructions
 
-### 6.1 Prerequisites
+### 7.1 Prerequisites
 - Python 3.10+ (Python 3.12 recommended)
 - Node.js 18+ (Node.js 20+ recommended) & npm
 - Git & Bash shell
 
-### 6.2 Setup Environment
+### 7.2 Setup Environment
 ```bash
-git clone https://github.com/arulmuruganm/aether-loop.git
+git clone https://github.com/arulmuruganmcse2024-tech/aether-loop.git
 cd aether-loop
 cp .env.example .env
 ```
 *(Optional)* Add your live `NEBIUS_API_KEY` and `TAVILY_API_KEY` to `.env`. When keys are omitted, the engine automatically operates in deterministic verified-fallback mode, generating verifiable cryptographic receipts.
 
-### 6.3 Run Deterministic Verification Suite
+### 7.3 Run Mechanics Benchmark & Verification Suite
 ```bash
 # Setup virtual environment
 python -m venv .venv
@@ -233,11 +264,14 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
+# Run standalone mechanics benchmark
+python scripts/benchmark_mechanics.py
+
 # Run the 11-point deterministic CI verification suite
 bash ./verify_submission.sh
 ```
 
-### 6.4 Build Frontend & Launch
+### 7.4 Build Frontend & Launch
 ```bash
 # Build frontend production bundle
 npm --prefix frontend install
@@ -250,15 +284,11 @@ Open **`http://localhost:8000`** in your browser.
 
 ---
 
-## 7. Automated Audit & Compliance Results
+## 8. Automated Audit & Compliance Results
 
 The entire codebase is verified via `bash ./verify_submission.sh`:
-- **Apache-2.0 License:** Verified present and valid.
+- **MIT License:** Standard OSI-approved MIT License verified present and valid.
 - **Zero Placeholder Compliance:** Verified zero `TODO`, `FIXME`, `pass`, or mock syntax in `backend/` and `frontend/src/`.
 - **Mathematical Integrity:** Verified 6-DOF RNE inverse dynamics, generalized momentum observer residual, and $6 \times 6$ spatial Jacobian.
 - **Syscall Interception:** Verified kernel-level interception of `/dev/can0` agent actions (`BLOCKED_BY_OPENSHELL`).
 - **All 11 CI Tests Passing:** 100% deterministic pass rate across all endpoints and physical solvers.
-
----
-
-**Authored and architected by Arul Murugan M.**

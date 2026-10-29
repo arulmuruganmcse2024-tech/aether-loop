@@ -156,7 +156,7 @@ const REGISTRY_PRESETS: Record<
     muK: 0.25,
     ior: 1.49,
     mass: 0.85,
-    vel: 0.35,
+    vel: 0.28,
     sreQuery: 'LeRobot SmolVLA depth sensor washout specular reflection domain randomization',
   },
   deformable_garment: {
@@ -166,7 +166,7 @@ const REGISTRY_PRESETS: Record<
     muK: 0.2,
     ior: 1.51,
     mass: 1.1,
-    vel: 0.3,
+    vel: 0.25,
     sreQuery: 'NVIDIA Isaac Lab deformable garment polybag manipulation LeRobot policy training',
   },
 };
@@ -1067,8 +1067,7 @@ export default function App() {
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Principal Systems Architect: <strong className="text-slate-200">Arul Murugan M</strong> · On-Robot 500Hz
-              Momentum Observer · Nebius Token Factory · NVIDIA OpenShell Agent Sandbox · Tavily
+              On-Robot 500Hz Momentum Observer · Nebius Token Factory · NVIDIA OpenShell Agent Sandbox · Tavily Search
             </p>
           </div>
         </div>
@@ -1692,7 +1691,7 @@ export default function App() {
               <div className="bg-slate-950 border border-slate-800 rounded-lg p-2.5 space-y-1.5 text-xs">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-amber-300">
-                    Tavily SRE Maintenance &amp; ROS2 Errata Search ($3,000 Track):
+                    Tavily SRE Maintenance &amp; ROS2 Errata Search:
                   </span>
                   <span className="font-mono text-[10px] text-emerald-400">
                     {healthStatus.tavily ? `LIVE API (${healthStatus.prefix})` : 'READY'}

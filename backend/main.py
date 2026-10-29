@@ -145,7 +145,7 @@ async def health_check():
     return {
         "status": "ok",
         "service": "AETHER-LOOP Autonomous Physical AI DevOps & SDG Pipeline",
-        "author": "Arul Murugan M",
+        "license": "MIT",
         "nebius_token_factory_configured": bool(router_engine.api_key),
         "tavily_configured": bool(router_engine.tavily_key),
         "tavily_key_prefix": (router_engine.tavily_key[:8] + "...") if router_engine.tavily_key else "not_set",

@@ -93,7 +93,7 @@ def test_fastapi_endpoints_and_sse_stream():
     health = client.get("/api/v1/health")
     assert health.status_code == 200
     assert health.json()["status"] == "ok"
-    assert health.json()["author"] == "Arul Murugan M"
+    assert health.json()["license"] == "MIT"
 
     sandbox = client.post(
         "/api/v1/verify-sandbox",
