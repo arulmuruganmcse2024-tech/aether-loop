@@ -15,7 +15,7 @@
 
 Deploying Vision-Language-Action (VLA) models (such as LeRobot SmolVLA) onto articulated manipulators reveals an acute engineering problem: **high-frequency embedded physical control and asynchronous cloud generative AI operate on fundamentally incompatible timescales**.
 
-1. **The 500Hz Edge Reality:** Real manipulators slip, oscillate, or hit singular configurations in milliseconds ($2.0\text{ ms}$ control loop). LLMs, web searches, and diffusion models cannot—and must never—run inside the inner control loop.
+1. **The 500Hz Edge Reality:** Real manipulators slip, oscillate, or hit singular configurations in milliseconds (2.0 ms control loop). LLMs, web searches, and diffusion models cannot—and must never—run inside the inner control loop.
 2. **The Asynchronous SRE Loop:** When contact disturbances or unmodeled hazards occur (e.g., low-friction hydraulic fluid spills $\mu_k \le 0.08$, specular blister-pack glare, or deformable packaging slippage), an autonomous SRE agent must inspect the failure, retrieve physical ground-truth tribology datasheets, dispatch synthetic data generation on cloud GPUs, fine-tune the policy, and attest its safety before updating the edge.
 
 **AETHER-LOOP** enforces a strictly decoupled, 3-subsystem architecture where physics is 100% deterministic, SRE triage is sandboxed with strict syscall interception, and cloud batch training is orchestrated via serverless GPU jobs.
@@ -62,7 +62,9 @@ Deploying Vision-Language-Action (VLA) models (such as LeRobot SmolVLA) onto art
 ### 2.1 6-DOF Lagrangian Dynamics & Recursive Newton-Euler (RNE)
 For the 6-DOF SO-101 articulated arm with generalized joint coordinates $q \in \mathbb{R}^6$, generalized velocities $\dot{q} \in \mathbb{R}^6$, and generalized accelerations $\ddot{q} \in \mathbb{R}^6$, the equation of motion is:
 
-$$M(q)\ddot{q} + C(q, \dot{q})\dot{q} + G(q) = \tau + \tau_{\text{ext}}$$
+$$
+M(q)\ddot{q} + C(q, \dot{q})\dot{q} + G(q) = \tau + \tau_{\text{ext}}
+$$
 
 where:
 - $M(q) \in \mathbb{R}^{6 \times 6}$ is the symmetric, positive-definite joint-space inertia matrix.
@@ -75,41 +77,69 @@ where:
 To detect contact anomalies, surface slip, and unmodeled payload mass at 500Hz without expensive 6-axis wrist F/T sensors, AETHER-LOOP implements an internal generalized momentum disturbance observer:
 
 The robot generalized momentum is:
-$$p = M(q)\dot{q}$$
+
+$$
+p = M(q)\dot{q}
+$$
 
 Taking the time derivative and substituting manipulator dynamics:
-$$\dot{p} = \tau + C^T(q, \dot{q})\dot{q} - G(q) + \tau_{\text{ext}}$$
+
+$$
+\dot{p} = \tau + C^T(q, \dot{q})\dot{q} - G(q) + \tau_{\text{ext}}
+$$
 
 The residual torque disturbance vector $\hat{r}(t) \in \mathbb{R}^6$ is estimated via:
-$$\hat{r}(t) = K_O \left[ p(t) - p(0) - \int_0^t \left( \tau + C^T(q, \dot{q})\dot{q} - G(q) + \hat{r}(\sigma) \right) d\sigma \right]$$
 
-where $K_O = \text{diag}(k_{o,1}, \dots, k_{o,6}) > 0$ is the observer gain matrix. When $\hat{r}(t)$ diverges from nominal, contact slip or mass variance is detected within $4\text{ ms}$.
+$$
+\hat{r}(t) = K_O \left[ p(t) - p(0) - \int_0^t \left( \tau + C^T(q, \dot{q})\dot{q} - G(q) + \hat{r}(\sigma) \right) d\sigma \right]
+$$
+
+where $K_O = \text{diag}(k_{o,1}, \dots, k_{o,6}) > 0$ is the observer gain matrix. When $\hat{r}(t)$ diverges from nominal, contact slip or mass variance is detected within 4 ms.
 
 ### 2.3 Online Coulomb Friction & Normal Preload Estimation
 From the external wrench reflected in the Cartesian end-effector frame, the effective contact friction coefficient is estimated via:
 
-$$\hat{\mu}_k(t) = \frac{\|F_{\text{tangential}}\|}{F_{\text{normal}}} = \frac{\sqrt{\hat{r}_x^2 + \hat{r}_y^2}}{m g \cos \theta + F_{\text{preload}}}$$
+$$
+\hat{\mu}_k(t) = \frac{\|F_{\text{tangential}}\|}{F_{\text{normal}}} = \frac{\sqrt{\hat{r}_x^2 + \hat{r}_y^2}}{m g \cos \theta + F_{\text{preload}}}
+$$
 
 To ensure tangential traction without slip:
-$$F_{\text{preload}} \ge \frac{m (\ddot{x}_{\text{tangential}} + g \sin \theta)}{\hat{\mu}_k}$$
+
+$$
+F_{\text{preload}} \ge \frac{m (\ddot{x}_{\text{tangential}} + g \sin \theta)}{\hat{\mu}_k}
+$$
 
 ### 2.4 Spatial Manipulator Jacobian, Condition Number & Yoshikawa Index
 The $6 \times 6$ geometric manipulator Jacobian $J(q) = \begin{bmatrix} J_v(q) \\ J_\omega(q) \end{bmatrix}$ maps joint rates to Cartesian end-effector twist:
 
-$$v_{ee} = \begin{bmatrix} \dot{p}_{ee} \\ \omega_{ee} \end{bmatrix} = J(q)\dot{q}$$
+$$
+v_{ee} = \begin{bmatrix} \dot{p}_{ee} \\ \omega_{ee} \end{bmatrix} = J(q)\dot{q}
+$$
 
 The **Yoshikawa Manipulability Index** quantifies distance from kinematic singularities:
-$$w(q) = \sqrt{\det\left( J(q) J(q)^T \right)} = \prod_{i=1}^6 \sigma_i(J)$$
+
+$$
+w(q) = \sqrt{\det\left( J(q) J(q)^T \right)} = \prod_{i=1}^6 \sigma_i(J)
+$$
 
 The **Jacobian Condition Number** assesses kinematic isotropy and torque amplification:
-$$\kappa(J) = \frac{\sigma_{\max}(J)}{\sigma_{\min}(J)} \ge 1.0$$
+
+$$
+\kappa(J) = \frac{\sigma_{\max}(J)}{\sigma_{\min}(J)} \ge 1.0
+$$
 
 ### 2.5 Box-Muller Gaussian Perturbation & Wilson Score 95% Confidence Intervals
 Monte Carlo rollouts in Subsystem 1 perturb the trajectory state using exact Box-Muller Gaussian noise:
-$$z_0 = \sqrt{-2 \ln u_1} \cos(2\pi u_2), \quad z_1 = \sqrt{-2 \ln u_1} \sin(2\pi u_2)$$
+
+$$
+z_0 = \sqrt{-2 \ln u_1} \cos(2\pi u_2), \quad z_1 = \sqrt{-2 \ln u_1} \sin(2\pi u_2)
+$$
 
 For $k$ passed rollouts out of $n=100$ total rollouts, the Wilson score interval provides the true 95% binomial confidence bound:
-$$CI_{95\%} = \frac{\hat{p} + \frac{z^2}{2n} \pm z\sqrt{\frac{\hat{p}(1-\hat{p})}{n} + \frac{z^2}{4n^2}}}{1 + \frac{z^2}{n}}, \quad z = 1.95996$$
+
+$$
+\text{CI}_{0.95} = \frac{\hat{p} + \frac{z^2}{2n} \pm z\sqrt{\frac{\hat{p}(1-\hat{p})}{n} + \frac{z^2}{4n^2}}}{1 + \frac{z^2}{n}}, \quad z = 1.95996
+$$
 
 ---
 
@@ -130,10 +160,10 @@ deformable_garment   | 0.20   | 0.092    | 14.56         | 0.4729 | 100/100 (100
 [PASS] All 3 contact regimes verified within 18.0 Nm actuator ceiling and >=92% survival.
 ```
 
-- **RNE Evaluation Latency:** Evaluates 6-DOF inverse dynamics in $< 0.15\text{ ms}$, safely within the $500\text{ Hz}$ ($2.0\text{ ms}$) embedded control loop deadline.
-- **Actuator Torque Ceiling:** All peak joint torques remain within the $18.0\text{ Nm}$ hard limit under worst-case Box-Muller dynamic perturbations.
+- **RNE Evaluation Latency:** Evaluates 6-DOF inverse dynamics in < 0.15 ms, safely within the 500 Hz (2.0 ms) embedded control loop deadline.
+- **Actuator Torque Ceiling:** All peak joint torques remain within the 18.0 Nm hard limit under worst-case Box-Muller dynamic perturbations.
 - **Kinematic Isotropy:** Yoshikawa manipulability $w(q) = 0.4729$ confirms well-conditioned joint trajectories without approaching kinematic singularities.
-- **Binomial Task Survival:** All regimes achieve $\ge 97.0\%$ completion across $N=100$ rollouts, with Wilson score lower bounds exceeding $91.5\%$.
+- **Binomial Task Survival:** All regimes achieve $\ge 97.0\%$ completion across $N = 100$ rollouts, with Wilson score lower bounds exceeding $91.5\%$.
 
 ---
 
@@ -144,12 +174,12 @@ AETHER-LOOP connects via `AsyncOpenAI` pointed to `https://api.tokenfactory.nebi
 
 | Tier | Model Identifier | Responsibility | SLA | Unit Cost |
 | :--- | :--- | :--- | :--- | :--- |
-| **Tier 0** | `nvidia/Nemotron-3-Nano-30B-A3B` | 10Hz CUSUM martingale joint-torque drift guard | $< 180\text{ ms}$ | $\$0.00012$ |
-| **Tier 1** | `nvidia/nemotron-3.5-super-vl` | Multimodal RGB + Depth failure keyframe inspection | $< 350\text{ ms}$ | $\$0.00045$ |
-| **Tier 2** | `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B` | 1M-token context ROS2 episode trajectory synthesis | $< 650\text{ ms}$ | $\$0.00085$ |
-| **Tier 3** | `nvidia/Nemotron-3-Ultra-550B-A55B` | Root-cause deduction & Cosmos 3 WSM JSON synthesis | $< 950\text{ ms}$ | $\$0.00098$ |
+| **Tier 0** | `nvidia/Nemotron-3-Nano-30B-A3B` | 10Hz CUSUM martingale joint-torque drift guard | < 180 ms | `$0.00012` |
+| **Tier 1** | `nvidia/nemotron-3.5-super-vl` | Multimodal RGB + Depth failure keyframe inspection | < 350 ms | `$0.00045` |
+| **Tier 2** | `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B` | 1M-token context ROS2 episode trajectory synthesis | < 650 ms | `$0.00085` |
+| **Tier 3** | `nvidia/Nemotron-3-Ultra-550B-A55B` | Root-cause deduction & Cosmos 3 WSM JSON synthesis | < 950 ms | `$0.00098` |
 
-Total orchestration inference cost averages **\$0.0024 per remediation cycle**, achieving a **26x cost reduction** over monolithic frontier models.
+Total orchestration inference cost averages **$0.0024 per remediation cycle**, achieving a **26x cost reduction** over monolithic frontier models.
 
 ### 4.2 Tavily Search API Real-Time Physical Grounding
 Rather than hallucinating friction coefficients or refractive indices, Subsystem 2 invokes `tavily-python` non-blockingly via `asyncio.to_thread` with strict 500-character snippet truncation:
@@ -171,7 +201,7 @@ Long-running training and synthesis workloads are staged on Nebius Serverless H1
 All automated SRE agent operations execute inside an isolated OpenShell sandbox:
 - **Syscall Filter:** Attempts by LLM agents to write directly to hardware actuator buses (`/dev/can0`, raw sockets) are intercepted at the kernel boundary and rejected with `EPERM` (`BLOCKED_BY_OPENSHELL`).
 - **Egress Filter:** Restricts agent network traffic strictly to whitelisted endpoints (`api.tokenfactory.nebius.com`, `api.tavily.com`).
-- **Safety Attestation:** Requires peak torque $\tau_{\text{peak}} \le 18.0\text{ Nm}$, swept-sphere clearance $> 0.0\text{ m}$, and task completion $\ge 94.0\%$ across 100 rollouts before signing an attestation receipt.
+- **Safety Attestation:** Requires peak torque $\tau_{\text{peak}} \le 18.0\text{ Nm}$, swept-sphere clearance > 0.0 m, and task completion ≥ 94.0% across 100 rollouts before signing an attestation receipt.
 
 ---
 
