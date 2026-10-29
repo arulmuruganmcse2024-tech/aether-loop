@@ -174,3 +174,16 @@ def test_bootstrap_kinematic_step_cosmos_modalities_and_signature_verifier():
     assert sig_check.json()["verified"] is True
 
 
+def test_live_reactive_hazard_parse_endpoint():
+    res = client.post(
+        "/api/v1/hazard/live-parse",
+        json={"anomaly_id": "skydrol_spill", "custom_text": "Cryogenic ice frost layer on 2.8kg glass vial"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["physics_spec"]["kinetic_friction_mu_k"] == 0.03
+    assert data["physics_spec"]["payload_mass_kg"] == 2.8
+    assert "step_nonce" in data
+
+
+
