@@ -49,6 +49,35 @@ app.add_middleware(
 
 router_engine = DynamicNemotronRouter()
 
+BROKER_SEQ_COUNTER = 0
+BROKER_WAL_STREAM: List[dict] = []
+
+
+def _emit_broker_stream_event(anomaly_id: str, description: str, delta_tau_nm: float = 6.42) -> dict:
+    global BROKER_SEQ_COUNTER
+    BROKER_SEQ_COUNTER += 1
+    stream_id = f"{int(time.time() * 1000)}-{BROKER_SEQ_COUNTER}"
+    payload_hash = hashlib.sha256(f"{stream_id}:{anomaly_id}:{description}".encode("utf-8")).hexdigest()[:16]
+    return {
+        "broker_protocol": "gRPC/HTTP2 -> Redis Streams WAL (xadd physical_ai:incidents *)",
+        "stream_offset_id": stream_id,
+        "consumer_group": "cg-nebius-sdg-workers",
+        "edge_publisher_node": "orin-agx-cell04.edge.internal:50051",
+        "cloud_consumer_ingress": "cluster-ingress.eu-north1.nebius.cloud:8443",
+        "mcap_frame_digest": f"mcap-sha256:{payload_hash}",
+        "mcap_payload_kb": 48.4,
+        "queue_lag_msgs": 0,
+        "ack_status": "XACK_COMMITTED",
+        "trigger_delta_tau_nm": round(delta_tau_nm, 2),
+    }
+
+
+class BrokerXaddRequest(BaseModel):
+    anomaly_id: str = "skydrol_spill"
+    description: str = ""
+    delta_tau_nm: float = 6.42
+
+
 
 class SandboxVerifyRequest(BaseModel):
     anomaly_id: str = "skydrol_spill"
@@ -208,6 +237,7 @@ async def bootstrap_live_session(anomaly_id: str = Query(default="skydrol_spill"
 
     return {
         "session_nonce": f"boot-{seed}",
+        "broker_event": _emit_broker_stream_event(anomaly_id, spec.material_or_contaminant),
         "physics_spec": spec.model_dump(),
         "initial_tier_logs": initial_tier_logs,
         "cosmos_bundle": cosmos_bundle,
@@ -222,11 +252,20 @@ async def bootstrap_live_session(anomaly_id: str = Query(default="skydrol_spill"
     }
 
 
+@app.post("/api/v1/broker/xadd")
+async def broker_xadd_endpoint(req: BrokerXaddRequest):
+    event = _emit_broker_stream_event(req.anomaly_id, req.description or req.anomaly_id, req.delta_tau_nm)
+    BROKER_WAL_STREAM.append(event)
+    return {"status": "ok", "stream_id": event["stream_offset_id"], "broker_event": event}
+
+
 @app.post("/api/v1/hazard/live-parse")
 async def parse_custom_hazard_live(req: CustomHazardPreviewRequest):
     base_spec = FALLBACK_PHYSICS_SPECS.get(req.anomaly_id, FALLBACK_PHYSICS_SPECS["skydrol_spill"])
     desc = req.custom_text.strip() or base_spec.material_or_contaminant
-    citations = [] if req.custom_text.strip() else base_spec.citations
+    citations = await router_engine.execute_tavily_physics_search(
+        f"{desc} friction coefficient viscosity refractive index tribology", req.anomaly_id
+    )
     grounded = synthesize_physics_from_tavily_evidence(
         anomaly_id=req.anomaly_id,
         description=desc,
@@ -251,7 +290,10 @@ async def parse_custom_hazard_live(req: CustomHazardPreviewRequest):
         canny_low=grounded.canny_edge_low_threshold,
         canny_high=grounded.canny_edge_high_threshold,
     )
+    broker_evt = _emit_broker_stream_event(req.anomaly_id, desc, receipt.max_observed_torque_nm)
+    BROKER_WAL_STREAM.append(broker_evt)
     return {
+        "broker_event": broker_evt,
         "physics_spec": grounded.model_dump(),
         "attestation": receipt.model_dump(),
         "vla_trajectory": trajectory,

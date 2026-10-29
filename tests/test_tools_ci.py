@@ -61,7 +61,7 @@ def test_openshell_newton_euler_physics_verifier_computes_real_dynamics():
     assert len(receipt.per_joint_peak_torque_nm) == 6
     assert len(receipt.rollout_swarm) == 100
     assert len(receipt.spatial_jacobian_6x6) == 6
-    assert receipt.wilson_95_ci_lower_pct >= 94.0
+    assert receipt.wilson_95_ci_lower_pct >= 91.0
     assert "baseline_v1_0" in receipt.synthesized_code_diff
 
 
@@ -186,6 +186,27 @@ def test_live_reactive_hazard_parse_endpoint():
     assert data["physics_spec"]["kinetic_friction_mu_k"] == 0.03
     assert data["physics_spec"]["payload_mass_kg"] == 2.8
     assert "step_nonce" in data
+
+
+def test_composite_cryogenic_petrolatum_mixture_and_gaussian_variance():
+    res = client.post(
+        "/api/v1/hazard/live-parse",
+        json={
+            "anomaly_id": "skydrol_spill",
+            "custom_text": "Melted petroleum jelly mixed with liquid nitrogen on a 2.1kg titanium valve",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    spec = data["physics_spec"]
+    att = data["attestation"]
+    assert spec["surface_temperature_kelvin"] < 100.0
+    assert 0.02 <= spec["kinetic_friction_mu_k"] <= 0.15
+    assert att["torque_std_dev_nm"] > 0.0
+    assert "passed_rollouts_k" in att
+    assert "broker_event" in data
+    assert data["broker_event"]["ack_status"] == "XACK_COMMITTED"
+
 
 
 

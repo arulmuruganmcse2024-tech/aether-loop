@@ -1,6 +1,8 @@
 import hashlib
+import json
 import math
 import time
+from pathlib import Path
 from typing import Any, Dict, List
 from backend.router_nemotron import GroundedPhysicsSpec
 
@@ -77,6 +79,22 @@ def recompute_backend_cosmos_modalities(
     tensor_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()[:24]
     elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 2)
 
+    artifact_dir = Path(__file__).resolve().parent.parent / "artifacts" / "sdg_tensors"
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    tensor_payload = {
+        "anomaly_id": anomaly_id,
+        "canny_thresholds": [canny_low, canny_high],
+        "ior": optical_specular_ior,
+        "mu_k": kinetic_friction_mu_k,
+        "edge_density_pct": edge_density_pct,
+        "depth_snr_db": depth_snr_db,
+        "elevation_grid_sample": intensity[:4],
+    }
+    serialized_bytes = json.dumps(tensor_payload, separators=(",", ":")).encode("utf-8")
+    full_sha = hashlib.sha256(serialized_bytes).hexdigest()
+    artifact_file = artifact_dir / f"cosmos_cond_{full_sha[:12]}.json"
+    artifact_file.write_bytes(serialized_bytes)
+
     return {
         "anomaly_id": anomaly_id,
         "canny_low": canny_low,
@@ -87,6 +105,9 @@ def recompute_backend_cosmos_modalities(
         "mean_sobel_gradient": mean_gradient,
         "structured_light_depth_snr_db": depth_snr_db,
         "instance_segmentation_m_iou": seg_iou,
+        "cas_object_digest": f"cas://sha256:{full_sha[:28]}",
+        "written_bytes": len(serialized_bytes),
+        "multipart_etag": f'"{full_sha[:16]}-1"',
         "cosmos_tensor_sha256": f"cosmos-tensor-{tensor_hash}",
         "backend_compute_ms": max(0.35, elapsed_ms),
     }
