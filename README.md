@@ -10,30 +10,33 @@
 **License:** MIT  
 
 <div align="center">
-  <a href="https://www.youtube.com/watch?v=YOUR_VIDEO_ID">
-    <img src="https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg" alt="AETHER-LOOP Demo Video" width="100%" />
-  </a>
-  <p><em>🎬 Watch the 3-Minute AETHER-LOOP Grand Prize Submission Video (Click to Play)</em></p>
+
+**Demo Video**
+
+[![AETHER-LOOP Demo Video](https://img.youtube.com/vi/T5NAfoSn1Xo/maxresdefault.jpg)](https://www.youtube.com/watch?v=T5NAfoSn1Xo)
+
+*Watch the 3-minute demo video*
+
 </div>
 
-> [!IMPORTANT]
-> ### 🏆 Executive Summary & Sponsor Integration Architecture
-> - **Nebius Token Factory:** 4-Tier Cognitive Model Router across specialized NVIDIA Nemotron architectures (`Nemotron-3-Nano`, `nemotron-3.5-super-vl`, `Nemotron-3-Super-120B`, and `Nemotron-3-Ultra-550B`) at **$0.0024 per remediation cycle** (26x cost reduction over monolithic models).
+> [!NOTE]
+> ### Overview & Sponsor Integrations
+> - **Nebius Token Factory:** 4-Tier Cognitive Model Router across specialized NVIDIA Nemotron architectures (`Nemotron-3-Nano`, `nemotron-3.5-super-vl`, `Nemotron-3-Super-120B`, and `Nemotron-3-Ultra-550B`) at **~$0.0024 per remediation cycle in our test runs**.
 > - **Nebius Serverless H100 GPU Jobs:** Asynchronous synthetic data batch generation and SmolVLA fine-tuning (`nebius ai job create`) with two-wait SDK polling pattern (`await operation.wait()` + `job_svc.get()`) mounting POSIX S3 storage (`/data`).
 > - **Live Tavily Tribology Grounding:** Non-blocking real-time technical datasheet (TDS) and MSDS retrieval for kinetic friction ($\mu_k$), viscosity, and specular refractive index ($IOR$) verification.
-> - **NVIDIA OpenShell & NemoClaw Sandbox:** Kernel-level syscall filter blocking unauthorized hardware actuator bus access (`/dev/can0` denied with `EPERM`) and declarative policy enforcement (`openshell_policy.yaml`) with cryptographic SHA-256 attestation.
+> - **NVIDIA OpenShell & NemoClaw Sandbox:** Policy-level interception (simulated in demo) blocking unauthorized hardware actuator bus access (`/dev/can0` denied with `EPERM`) and declarative policy enforcement (`openshell_policy.yaml`) with SHA-256 attestation receipt.
 > - **500Hz Deterministic Mechanics Observer:** 6-DOF Recursive Newton-Euler dynamics, Generalized Momentum Disturbance Observer ($\hat{r}(t)$), and Yoshikawa Manipulability Index ($w(q)$) executing in $< 0.15\text{ ms}$ with zero LLMs in the high-frequency control loop.  
 
 ---
 
 ## 1. Architectural Motivation: Decoupling Physics from LLMs
 
-Deploying Vision-Language-Action (VLA) models (such as LeRobot SmolVLA) onto articulated manipulators reveals an acute engineering problem: **high-frequency embedded physical control and asynchronous cloud generative AI operate on fundamentally incompatible timescales**.
+Deploying Vision-Language-Action (VLA) models (such as LeRobot SmolVLA) onto articulated manipulators reveals an engineering problem: **high-frequency embedded physical control and asynchronous cloud generative AI operate on different timescales**.
 
 1. **The 500Hz Edge Reality:** Real manipulators slip, oscillate, or hit singular configurations in milliseconds (2.0 ms control loop). LLMs, web searches, and diffusion models cannot—and must never—run inside the inner control loop.
 2. **The Asynchronous SRE Loop:** When contact disturbances or unmodeled hazards occur (e.g., low-friction hydraulic fluid spills $\mu_k \le 0.08$, specular blister-pack glare, or deformable packaging slippage), an autonomous SRE agent must inspect the failure, retrieve physical ground-truth tribology datasheets, dispatch synthetic data generation on cloud GPUs, fine-tune the policy, and attest its safety before updating the edge.
 
-**AETHER-LOOP** enforces a strictly decoupled, 3-subsystem architecture where physics is 100% deterministic, SRE triage is sandboxed with strict syscall interception, and cloud batch training is orchestrated via serverless GPU jobs.
+**AETHER-LOOP** enforces a decoupled, 3-subsystem architecture where physics is deterministic, SRE triage is sandboxed with policy-level syscall interception, and cloud batch training is orchestrated via serverless GPU jobs.
 
 ```
 +---------------------------------------------------------------------------------------------------------+
@@ -50,7 +53,7 @@ Deploying Vision-Language-Action (VLA) models (such as LeRobot SmolVLA) onto art
 |         [Disturbance Threshold Exceeded: ||r_hat|| > 1.2 Nm OR Coulomb Slip Detected]                   |
 |                                       ▼                                                                 |
 |  [SUBSYSTEM 2: SANDBOXED OPENSHELL SRE AGENT & LIVE TAVILY GROUNDING] (Computer 2 & 1 Orchestrator)    |
-|      ├── NVIDIA OpenShell / NemoClaw Sandbox: Syscall Guard Interception (/dev/can0 blocked with EPERM) |
+|      ├── NVIDIA OpenShell / NemoClaw Sandbox: Policy-Level Interception (/dev/can0 blocked with EPERM)  |
 |      ├── Egress Filtering: Whitelisted to api.tokenfactory.nebius.com & api.tavily.com                  |
 |      ├── Live Tavily Tribology & Optics Search: Live TDS/MSDS physical grounding                        |
 |      └── Nebius Token Factory 4-Tier Cognitive Router: Nemotron 3 Nano/Super/Ultra (Cost: $0.0024/run)  |
@@ -61,12 +64,12 @@ Deploying Vision-Language-Action (VLA) models (such as LeRobot SmolVLA) onto art
 |      ├── Computer 2: NVIDIA Cosmos 3 SDG Container (RGB, Depth, Segmentation, Shaded Normal, Edges)     |
 |      ├── Computer 1: LeRobot SmolVLA Fine-Tuning Container (12-Epoch Minimum-Jerk Adaptation)           |
 |      ├── NVIDIA OpenShell Declarative Gate (openshell_policy.yaml): 100-rollout swept-sphere validation |
-|      └── Verifiable Cryptographic SHA-256 Attestation Receipt (openshell-sig-...)                       |
+|      └── SHA-256 Attestation Receipt (openshell-sig-...)                                                |
 |                                       │                                                                 |
 |         [Verified Safe: tau_peak <= 18.0 Nm, Collisions = 0.0%, Task Success >= 94.0%]                  |
 |                                       ▼                                                                 |
-|  [ZERO-DOWNTIME OTA EDGE CHECKPOINT HOT-SWAP]                                                           |
-|      Edge manipulator transitions seamlessly to Remediated Policy v1.1                                  |
+|  [OTA CHECKPOINT HOT-SWAP]                                                                              |
+|      Edge manipulator transitions to Remediated Policy v1.1                                             |
 +---------------------------------------------------------------------------------------------------------+
 ```
 
@@ -160,11 +163,11 @@ $$
 
 ## 3. Physics & Monte Carlo Benchmark Results
 
-To verify computational determinism and real-time execution guarantees across the SO-101 manipulator's operational envelope, `scripts/benchmark_mechanics.py` runs an automated validation sweep across all three anomalous contact regimes:
+To test computational performance and execution bounds across the simulated SO-101 manipulator model, `scripts/benchmark_mechanics.py` evaluates a validation sweep across all three anomalous contact regimes in simulation:
 
 ```
 ============================================================================================
-AETHER-LOOP | 6-DOF RNE MECHANICS, MOMENTUM OBSERVER & N=100 MONTE CARLO BENCHMARK
+AETHER-LOOP | 6-DOF RNE MECHANICS, MOMENTUM OBSERVER & N=100 MONTE CARLO (SO-101 SIMULATION)
 ============================================================================================
 Regime ID            | mu_k   | RNE (ms) | Peak Tau (Nm) | w(q)   | k/n Survival | 95% Wilson CI   
 --------------------------------------------------------------------------------------------
@@ -172,7 +175,7 @@ skydrol_spill        | 0.08   | 0.120    | 14.44         | 0.4729 | 97/100 (97.0
 biopharma_glare      | 0.25   | 0.150    | 16.02         | 0.4729 | 100/100 (100.0%) | [96.3%, 100.0%] 
 deformable_garment   | 0.20   | 0.092    | 14.56         | 0.4729 | 100/100 (100.0%) | [96.3%, 100.0%] 
 ============================================================================================
-[PASS] All 3 contact regimes verified within 18.0 Nm actuator ceiling and >=92% survival.
+Results within the 18.0 Nm limit in simulation across all 3 contact regimes (>=92% survival).
 ```
 
 - **RNE Evaluation Latency:** Evaluates 6-DOF inverse dynamics in < 0.15 ms, safely within the 500 Hz (2.0 ms) embedded control loop deadline.
@@ -194,7 +197,7 @@ AETHER-LOOP connects via `AsyncOpenAI` pointed to `https://api.tokenfactory.nebi
 | **Tier 2** | `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B` | 1M-token context ROS2 episode trajectory synthesis | < 650 ms | `$0.00085` |
 | **Tier 3** | `nvidia/Nemotron-3-Ultra-550B-A55B` | Root-cause deduction & Cosmos 3 WSM JSON synthesis | < 950 ms | `$0.00098` |
 
-Total orchestration inference cost averages **$0.0024 per remediation cycle**, achieving a **26x cost reduction** over monolithic frontier models.
+Total orchestration inference cost averages **~$0.0024 per remediation cycle in our test runs** across the four Nemotron models.
 
 ### 4.2 Tavily Search API Real-Time Physical Grounding
 Rather than hallucinating friction coefficients or refractive indices, Subsystem 2 invokes `tavily-python` non-blockingly via `asyncio.to_thread` with strict 500-character snippet truncation:
@@ -213,10 +216,21 @@ Long-running training and synthesis workloads are staged on Nebius Serverless H1
 - Emits reproducible CLI commands with mandatory flags (`--shm-size 16Gi`, `--disk-size 250Gi`, `--policy.input_features=null`).
 
 ### 4.4 NVIDIA OpenShell & NemoClaw Syscall Interception
-All automated SRE agent operations execute inside an isolated OpenShell sandbox:
-- **Syscall Filter:** Attempts by LLM agents to write directly to hardware actuator buses (`/dev/can0`, raw sockets) are intercepted at the kernel boundary and rejected with `EPERM` (`BLOCKED_BY_OPENSHELL`).
+Automated SRE agent actions are evaluated against declarative policy rules:
+- **Syscall Filter:** Policy-level interception (simulated in demo) rejecting unauthorized hardware actuator bus access (`/dev/can0`, raw sockets) with `EPERM` (`BLOCKED_BY_OPENSHELL`).
 - **Egress Filter:** Restricts agent network traffic strictly to whitelisted endpoints (`api.tokenfactory.nebius.com`, `api.tavily.com`).
-- **Safety Attestation:** Requires peak torque $\tau_{\text{peak}} \le 18.0\text{ Nm}$, swept-sphere clearance > 0.0 m, and task completion ≥ 94.0% across 100 rollouts before signing an attestation receipt.
+- **Safety Attestation:** Requires peak torque $\tau_{\text{peak}} \le 18.0\text{ Nm}$, swept-sphere clearance > 0.0 m, and task completion ≥ 94.0% across 100 rollouts before generating a SHA-256 attestation receipt.
+
+### 4.5 Runtime Modes: Live vs. Simulated / Fallback
+
+| Subsystem / Feature | With API Keys (`.env`) | Without API Keys (Fallback Mode) |
+| :--- | :--- | :--- |
+| **Subsystem 1 (500Hz Dynamics)** | Deterministic 6-DOF RNE, Momentum Observer & Box-Muller Monte Carlo (Python/TS) | Identical deterministic 6-DOF physics engine (runs fully locally) |
+| **Subsystem 2 (Tavily Grounding)** | Live HTTP query to `https://api.tavily.com/search` for real MSDS/tribology datasheets | Pre-grounded tribology cache for Skydrol, BOPP, and LDPE regimes |
+| **Subsystem 2 (Nemotron Router)** | Live streaming via Nebius Token Factory (`api.tokenfactory.nebius.com`) | Deterministic multi-tier response synthesizer with simulated latency |
+| **Subsystem 2 (OpenShell Guard)** | Policy-level interception simulating seccomp EPERM on `/dev/can0` | Policy-level interception simulating seccomp EPERM on `/dev/can0` |
+| **Subsystem 3 (Nebius GPU Batch)** | Formats and validates runnable CLI commands (`nebius ai job create`) | Pre-computed 12-epoch SmolVLA loss curve & code patch diffs |
+| **Attestation Receipt** | SHA-256 content-addressable hash over policy manifest & rollout metrics | SHA-256 content-addressable hash over policy manifest & rollout metrics |
 
 ---
 
@@ -234,7 +248,7 @@ All automated SRE agent operations execute inside an isolated OpenShell sandbox:
 | `POST` | `/api/v1/tavily/live-test` | Direct live Tavily search API tester for tribological and errata docs |
 | `POST` | `/api/v1/hazard/live-parse` | Real-time physical specification synthesis from custom hazard descriptions |
 | `POST` | `/api/v1/cosmos/recompute-modalities` | Recomputes Canny edge density, depth SNR, and tensor manifests |
-| `POST` | `/api/v1/openshell/verify-signature` | Cryptographic SHA-256 signature verifier for attestation receipts |
+| `POST` | `/api/v1/openshell/verify-signature` | SHA-256 receipt integrity verifier for attestation receipts |
 | `POST` | `/api/v1/broker/xadd` | Asynchronous telemetry event broker decoupling Edge from Cloud SDG |
 
 ---
@@ -248,7 +262,7 @@ All automated SRE agent operations execute inside an isolated OpenShell sandbox:
 ├── .env.example                 # Configuration template for Nebius and Tavily credentials
 ├── requirements.txt             # Python backend dependencies (FastAPI, Uvicorn, OpenAI, Tavily, Pytest)
 ├── docker-compose.yml           # Multi-container orchestration (Backend + Frontend)
-├── Dockerfile.backend           # Production Python 3.12 container specification
+├── Dockerfile.backend           # Python 3.12 container specification for working prototype
 ├── verify_submission.sh         # Deterministic pre-submission CI test & compliance audit script
 ├── .github/
 │   └── workflows/
@@ -275,13 +289,13 @@ All automated SRE agent operations execute inside an isolated OpenShell sandbox:
     ├── package.json             # React 18, Three.js, Tailwind CSS, Vite dependencies
     ├── tsconfig.json            # Strict TypeScript configuration
     ├── vite.config.ts           # Development server and reverse proxy configuration
-    ├── tailwind.config.js       # Enterprise dark-mode Tailwind theme configuration
+    ├── tailwind.config.js       # Dark-mode Tailwind theme configuration
     ├── postcss.config.js        # PostCSS build pipeline
     ├── index.html               # Main HTML entry point
     └── src/
         ├── main.tsx             # React application bootstrap
         ├── index.css            # Tailwind directives and viewport reset styles
-        └── App.tsx              # Mission Control: 3D CAD Workcell, SRE Cockpit, 6-Tab Analyzer
+        └── App.tsx              # Interactive 3D Workcell, SRE Workbench, 6-Tab Analyzer
 ```
 
 ---
@@ -299,7 +313,7 @@ git clone https://github.com/arulmuruganmcse2024-tech/aether-loop.git
 cd aether-loop
 cp .env.example .env
 ```
-*(Optional)* Add your live `NEBIUS_API_KEY` and `TAVILY_API_KEY` to `.env`. When keys are omitted, the engine automatically operates in deterministic verified-fallback mode, generating verifiable cryptographic receipts.
+*(Optional)* Add your live `NEBIUS_API_KEY` and `TAVILY_API_KEY` to `.env`. When keys are omitted, the engine automatically operates in deterministic fallback mode, generating SHA-256 attestation receipts.
 
 ### 7.3 Run Mechanics Benchmark & Verification Suite
 ```bash
@@ -330,11 +344,11 @@ Open **`http://localhost:8000`** in your browser.
 
 ---
 
-## 8. Automated Audit & Compliance Results
+## 8. Tests & CI
 
-The entire codebase is verified via `bash ./verify_submission.sh`:
-- **MIT License:** Standard OSI-approved MIT License verified present and valid.
-- **Zero Placeholder Compliance:** Verified zero `TODO`, `FIXME`, `pass`, or mock syntax in `backend/` and `frontend/src/`.
-- **Mathematical Integrity:** Verified 6-DOF RNE inverse dynamics, generalized momentum observer residual, and $6 \times 6$ spatial Jacobian.
-- **Syscall Interception:** Verified kernel-level interception of `/dev/can0` agent actions (`BLOCKED_BY_OPENSHELL`).
-- **All 11 CI Tests Passing:** 100% deterministic pass rate across all endpoints and physical solvers.
+The codebase is tested via `bash ./verify_submission.sh`:
+- **MIT License:** MIT licensed.
+- **Placeholder Check:** Source is checked for TODO/FIXME markers in CI across `backend/` and `frontend/src/`.
+- **Dynamics & Mechanics:** Unit tests cover the RNE dynamics, observer residual, and Jacobian.
+- **Syscall Interception:** Policy-level interception of `/dev/can0` agent actions (`BLOCKED_BY_OPENSHELL`).
+- **CI Suite:** 11 unit tests, run via verify_submission.sh.
