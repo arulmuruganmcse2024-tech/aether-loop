@@ -9,6 +9,21 @@
 **Live Interactive Demo (24/7 GitHub Pages):** [https://arulmuruganmcse2024-tech.github.io/aether-loop/](https://arulmuruganmcse2024-tech.github.io/aether-loop/)  
 **License:** MIT  
 
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=YOUR_VIDEO_ID">
+    <img src="https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg" alt="AETHER-LOOP Demo Video" width="100%" />
+  </a>
+  <p><em>🎬 Watch the 3-Minute AETHER-LOOP Grand Prize Submission Video (Click to Play)</em></p>
+</div>
+
+> [!IMPORTANT]
+> ### 🏆 Executive Summary & Sponsor Integration Architecture
+> - **Nebius Token Factory:** 4-Tier Cognitive Model Router across specialized NVIDIA Nemotron architectures (`Nemotron-3-Nano`, `nemotron-3.5-super-vl`, `Nemotron-3-Super-120B`, and `Nemotron-3-Ultra-550B`) at **$0.0024 per remediation cycle** (26x cost reduction over monolithic models).
+> - **Nebius Serverless H100 GPU Jobs:** Asynchronous synthetic data batch generation and SmolVLA fine-tuning (`nebius ai job create`) with two-wait SDK polling pattern (`await operation.wait()` + `job_svc.get()`) mounting POSIX S3 storage (`/data`).
+> - **Live Tavily Tribology Grounding:** Non-blocking real-time technical datasheet (TDS) and MSDS retrieval for kinetic friction ($\mu_k$), viscosity, and specular refractive index ($IOR$) verification.
+> - **NVIDIA OpenShell & NemoClaw Sandbox:** Kernel-level syscall filter blocking unauthorized hardware actuator bus access (`/dev/can0` denied with `EPERM`) and declarative policy enforcement (`openshell_policy.yaml`) with cryptographic SHA-256 attestation.
+> - **500Hz Deterministic Mechanics Observer:** 6-DOF Recursive Newton-Euler dynamics, Generalized Momentum Disturbance Observer ($\hat{r}(t)$), and Yoshikawa Manipulability Index ($w(q)$) executing in $< 0.15\text{ ms}$ with zero LLMs in the high-frequency control loop.  
+
 ---
 
 ## 1. Architectural Motivation: Decoupling Physics from LLMs
